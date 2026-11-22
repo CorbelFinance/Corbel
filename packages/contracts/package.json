@@ -1,0 +1,12 @@
+{
+  "name": "@corbel/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "relay": "node --env-file-if-exists=../../.env --env-file-if-exists=../../apps/web/.env.local --experimental-strip-types --no-warnings scripts/rpc-relay.ts",
+    "compile": "\"$HOME/.foundry/bin/forge\" build",
+    "test:contracts": "\"$HOME/.foundry/bin/forge\" test --no-match-path \"test/fork/*\"",
+    "test:fork": "\"$HOME/.foundry/bin/forge\" test --match-path \"test/fork/*\" --fork-url http://127.0.0.1:8547"
+  }
+}

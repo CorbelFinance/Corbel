@@ -1,0 +1,48 @@
+/* Corbel tokens.
+   Muted raised for contrast; amber added for caution (green good, red danger, amber caution, grey info). */
+:root {
+  --bg: #060807;
+  --surface: #0c110e;
+  --surface-2: #121a15;
+  --line: #1d2b22;
+  --text: #e8eee6;
+  --muted: #a7b5ab;
+  --amber: #e3b341;
+  --ui: #2fbf72; /* interface: buttons, links, focus; green like the hero */
+  --rind: #0f5b34;
+  --leaf: #2fbf72;
+  --flesh: #ff4560;
+  --flesh-deep: #4a0e19;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-amber: var(--amber);
+  --color-ui: var(--ui);
+  --color-rind: var(--rind);
+  --color-leaf: var(--leaf);
+  --color-flesh: var(--flesh);
+  --color-flesh-deep: var(--flesh-deep);
+
+  --font-display: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, monospace;
+
+  /* Type scale 12/14/16/20/32/56/96 */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-2xl: clamp(1.5rem, 1.1rem + 1.4vw, 2rem);
+  --text-4xl: clamp(2.25rem, 1.4rem + 3.2vw, 3.5rem);
+  --text-7xl: clamp(2.75rem, 1rem + 6.4vw, 6rem);
+
+  --container-page: 110rem;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@corbel/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "corbel-mcp": "src/server.ts" },
+  "scripts": {
+    "start": "node --experimental-strip-types --no-warnings src/server.ts"
+  }
+}
