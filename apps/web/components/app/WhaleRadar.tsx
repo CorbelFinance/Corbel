@@ -108,6 +108,9 @@ export function WhaleRadar() {
   }, [rows]);
   const wmax = Math.max(1, ...wallets.map((x) => x.b + x.s));
   const net = bought - sold;
+  // one wallet trading back and forth can make most of the dollars: say so, and show the totals without it
+  const lead = wallets[0];
+  const leadShare = lead && bought + sold > 0 ? (lead.b + lead.s) / (bought + sold) : 0;
 
   return (
     <Bay
@@ -132,22 +135,27 @@ export function WhaleRadar() {
           ] as const
         ).map(([k, v, c]) => (
           <div key={k} className="bg-(--bay-bg) px-5 py-3">
-            <p className="text-[12px] text-muted">{`${k} in big swaps`}</p>
+            <p className="text-[13px] text-muted">{`${k} in big swaps`}</p>
             <p className={cx("font-mono text-[22px]", c)}>
               <CountUp value={v} fmt={(x) => `${x < 0 ? "−" : ""}${usd(Math.abs(x))}`} />
             </p>
           </div>
         ))}
         <div className="bg-(--bay-bg) px-5 py-3">
-          <p className="flex justify-between text-[12px] text-muted">
+          <p className="flex justify-between text-[13px] text-muted">
             Buy share <span className="font-mono">{`${rows.length} swaps`}</span>
           </p>
           <div className="mt-2.5 flex h-2.5 overflow-hidden rounded-full bg-[#2a1416]">
             <span className="h-full rounded-full bg-leaf transition-[width] duration-700" style={{ width: `${bought + sold ? (bought / (bought + sold)) * 100 : 50}%` }} />
           </div>
-          <p className="mt-1.5 font-mono text-[12px] text-muted">{bought + sold ? `${Math.round((bought / (bought + sold)) * 100)}% of the dollars are buys` : "—"}</p>
+          <p className="mt-1.5 font-mono text-[13px] text-muted">{bought + sold ? `${Math.round((bought / (bought + sold)) * 100)}% of the dollars are buys` : "—"}</p>
         </div>
       </div>
+      {lead && leadShare >= 0.4 && (
+        <p role="note" className="border-b border-(--bay-edge) bg-amber/5 px-5 py-2.5 text-[14px] text-amber">
+          {`One wallet, ${lead.who.slice(0, 6)}…${lead.who.slice(-4)}, made ${Math.round(leadShare * 100)}% of these dollars in ${lead.n} swaps: its trades back and forth are not market flow. Without it: bought ${usd(bought - lead.b)}, sold ${usd(sold - lead.s)}.`}
+        </p>
+      )}
 
       <div className="px-5 pb-5 pt-4">
         <SubTabs label="View" value={view} onChange={setView} tabs={VIEWS.map((v) => ({ ...v, n: v.id === "tape" ? rows.length || undefined : v.id === "tokens" ? tokens.length || undefined : wallets.length || undefined }))} />
@@ -155,7 +163,7 @@ export function WhaleRadar() {
         {res && !rows.length && (
           <div className="mt-4 grid place-items-center rounded-2xl border border-dashed border-(--bay-edge) py-14 text-center">
             <p className="text-[14px] text-text">No swaps this size yet in the window.</p>
-            <p className="mt-1 text-[12.5px] text-muted">Try a smaller size, or come back in a few minutes: the list fills as swaps happen.</p>
+            <p className="mt-1 text-[13px] text-muted">Try a smaller size, or come back in a few minutes: the list fills as swaps happen.</p>
           </div>
         )}
 
@@ -167,21 +175,21 @@ export function WhaleRadar() {
               .map((r) => {
                 const isNew = fresh.has(`${r.tx}:${r.side}:${r.token}`);
                 return (
-                  <li key={`${r.tx}:${r.side}:${r.token}`} className={cx("grid grid-cols-[3rem_minmax(0,9rem)_minmax(0,1fr)_6rem] items-center gap-3 px-4 py-2.5 text-[13px] sm:grid-cols-[3rem_9rem_4rem_minmax(0,1fr)_6.5rem_8rem_5.5rem]", isNew && "whale-new")}>
-                    <span className="font-mono text-[12px] text-muted">{ago(r.t, now)}</span>
+                  <li key={`${r.tx}:${r.side}:${r.token}`} className={cx("grid grid-cols-[3rem_minmax(0,9rem)_minmax(0,1fr)_6rem] items-center gap-3 px-4 py-2.5 text-[14px] sm:grid-cols-[3rem_9rem_4rem_minmax(0,1fr)_6.5rem_8rem_5.5rem]", isNew && "whale-new")}>
+                    <span className="font-mono text-[13px] text-muted">{ago(r.t, now)}</span>
                     <Link href={`/app/trade/terminal?token=${r.token}`} className="flex min-w-0 items-center gap-2 hover:text-(--bay-acc)">
                       <TokenAvatar address={r.token} symbol={r.symbol} size={22} />
                       <span className="truncate font-mono text-text">{r.symbol}</span>
                     </Link>
-                    <span className={cx("hidden rounded-md px-1.5 py-0.5 text-center font-mono text-[12px] sm:block", r.side === "buy" ? "bg-leaf/12 text-leaf" : "bg-flesh/12 text-flesh")}>{r.side}</span>
+                    <span className={cx("hidden rounded-md px-1.5 py-0.5 text-center font-mono text-[13px] sm:block", r.side === "buy" ? "bg-leaf/12 text-leaf" : "bg-flesh/12 text-flesh")}>{r.side}</span>
                     <span className="h-2 overflow-hidden rounded-full bg-[#181818]">
                       <span className={cx("block h-full rounded-full", r.side === "buy" ? "bg-leaf" : "bg-flesh")} style={{ width: `${Math.max(3, Math.sqrt(r.usd / max) * 100)}%` }} />
                     </span>
                     <span className={cx("text-right tabular-nums", r.side === "buy" ? "text-leaf" : "text-flesh")}>{usd(r.usd)}</span>
-                    <Link href={`/app/wallet/exposure?address=${r.who}`} className="hidden truncate font-mono text-[12px] text-muted hover:text-text sm:block" title={r.signer ? "Signer of the transaction" : "Address the pool paid"}>
+                    <Link href={`/app/wallet/exposure?address=${r.who}`} className="hidden truncate font-mono text-[13px] text-muted hover:text-text sm:block" title={r.signer ? "Signer of the transaction" : "Address the pool paid"}>
                       {short(r.who)}
                     </Link>
-                    <a href={`${EXPLORER}${r.tx}`} target="_blank" rel="noreferrer" className="hidden text-right tabular-nums text-[12px] text-muted hover:text-text sm:block">
+                    <a href={`${EXPLORER}${r.tx}`} target="_blank" rel="noreferrer" className="hidden text-right tabular-nums text-[13px] text-muted hover:text-text sm:block">
                       {`${r.tx.slice(0, 6)}… ↗`}
                     </a>
                   </li>
@@ -193,7 +201,7 @@ export function WhaleRadar() {
         {view === "tokens" && rows.length > 0 && (
           <ul key="tokens" className="pane-in mt-4 space-y-2">
             {tokens.map((x, i) => (
-              <li key={x.token} className="grid grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-3 text-[13px]">
+              <li key={x.token} className="grid grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-3 text-[14px]">
                 <Link href={`/app/trade/terminal?token=${x.token}`} className="flex min-w-0 items-center gap-2 hover:text-(--bay-acc)">
                   <TokenAvatar address={x.token} symbol={x.symbol} size={22} />
                   <span className="truncate font-mono text-text">{x.symbol}</span>
@@ -207,7 +215,7 @@ export function WhaleRadar() {
                 <span className={cx("text-right tabular-nums", x.b - x.s >= 0 ? "text-leaf" : "text-flesh")}>{`${x.b - x.s >= 0 ? "+" : "−"}${usd(Math.abs(x.b - x.s))}`}</span>
               </li>
             ))}
-            <li className="grid grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_6rem] gap-3 pt-1 font-mono text-[12px] text-muted">
+            <li className="grid grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_6rem] gap-3 pt-1 font-mono text-[13px] text-muted">
               <span />
               <span className="text-right">← sold</span>
               <span>bought →</span>
@@ -220,14 +228,14 @@ export function WhaleRadar() {
           <ul key="wallets" className="pane-in mt-4 space-y-1.5">
             {wallets.map((x, i) => (
               <li key={x.who}>
-                <Link href={`/app/wallet/exposure?address=${x.who}`} className="grid grid-cols-[1.5rem_8rem_minmax(0,1fr)_6rem] items-center gap-3 rounded-xl px-2 py-2 text-[13px] transition-colors hover:bg-(--bay-bg2) sm:grid-cols-[1.5rem_8rem_minmax(0,1fr)_10rem_6rem]">
-                  <span className="font-mono text-[12px] text-muted">{i + 1}</span>
+                <Link href={`/app/wallet/exposure?address=${x.who}`} className="grid grid-cols-[1.5rem_8rem_minmax(0,1fr)_6rem] items-center gap-3 rounded-xl px-2 py-2 text-[14px] transition-colors hover:bg-(--bay-bg2) sm:grid-cols-[1.5rem_8rem_minmax(0,1fr)_10rem_6rem]">
+                  <span className="font-mono text-[13px] text-muted">{i + 1}</span>
                   <span className="font-mono text-text">{short(x.who)}</span>
                   <span className="flex h-3 overflow-hidden rounded-full bg-[#181818]" style={{ width: `${((x.b + x.s) / wmax) * 100}%` }}>
                     <span className="h-full bg-leaf" style={{ width: `${(x.b / (x.b + x.s)) * 100}%` }} />
                     <span className="h-full flex-1 bg-flesh" />
                   </span>
-                  <span className="hidden truncate text-[12px] text-muted sm:block">{`${x.n} swaps · ${[...x.tokens].slice(0, 3).join(", ")}`}</span>
+                  <span className="hidden truncate text-[13px] text-muted sm:block">{`${x.n} swaps · ${[...x.tokens].slice(0, 3).join(", ")}`}</span>
                   <span className="text-right tabular-nums text-text">{usd(x.b + x.s)}</span>
                 </Link>
               </li>

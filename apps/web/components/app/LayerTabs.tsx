@@ -4,6 +4,9 @@
  * A layer's tabs as a workflow. Tabs with a `step` are the main path, numbered and joined by arrows
  * (e.g. Trade: find, check, swap); the rest sit after a divider. Moving along the path carries the token you
  * are looking at, so the next step opens on it instead of starting over.
+ *
+ * One way to each place: from xl up the left rail already lists every tool, so the bar keeps only the numbered
+ * path, and only while the page is one of its steps. Below xl (no rail) the bar is the menu and shows every tab.
  */
 import { cx } from "@corbel/ui";
 
@@ -47,7 +50,7 @@ export function LayerTabs({ layer, tabs, current }: { layer: string; tabs: BarTa
     <nav aria-label="Layer tabs" className="-mx-1 ml-auto max-w-full overflow-x-auto px-1 [scrollbar-width:none]">
       <div className="flex w-max items-center gap-2">
         {flow.length > 0 && (
-          <ol className="flex items-center gap-0.5 rounded-2xl border border-[#242424] bg-[#131313] p-[3px]">
+          <ol className={cx("flex items-center gap-0.5 rounded-2xl border border-[#242424] bg-[#131313] p-[3px]", at < 0 && "xl:hidden")}>
             {flow.map((t, i) => {
               const on = t.id === current;
               const done = at > i;
@@ -73,8 +76,8 @@ export function LayerTabs({ layer, tabs, current }: { layer: string; tabs: BarTa
                       {i + 1}
                     </span>
                     <span className="leading-tight">
-                      <span className={cx("block text-[13px] font-medium", on ? "text-text" : "text-muted group-hover:text-text")}>{t.label}</span>
-                      <span className="block text-[12px] text-muted">{t.step}</span>
+                      <span className={cx("block text-[14px] font-medium", on ? "text-text" : "text-muted group-hover:text-text")}>{t.label}</span>
+                      <span className="block text-[13px] text-muted">{t.step}</span>
                     </span>
                   </a>
                 </li>
@@ -83,13 +86,13 @@ export function LayerTabs({ layer, tabs, current }: { layer: string; tabs: BarTa
           </ol>
         )}
         {more.length > 0 && (
-          <ul className="flex items-center gap-0.5 rounded-full bg-[#181818] p-[3px]">
+          <ul className="flex items-center gap-0.5 rounded-full bg-[#181818] p-[3px] xl:hidden">
             {more.map((t) => (
               <li key={t.id}>
                 <a
                   href={`/app/${layer}/${t.id}`}
                   aria-current={t.id === current ? "page" : undefined}
-                  className={cx("flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors", t.id === current ? "bg-[#282828] text-text" : "text-muted hover:text-text")}
+                  className={cx("flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors", t.id === current ? "bg-[#282828] text-text" : "text-muted hover:text-text")}
                 >
                   {t.label}
                   {t.soon && <span className="rounded-full border border-[#343434] px-1.5 font-medium text-[12px] uppercase tracking-[0.08em] text-muted">soon</span>}

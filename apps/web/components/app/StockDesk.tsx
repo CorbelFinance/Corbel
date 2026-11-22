@@ -161,7 +161,7 @@ export function StockDesk() {
             <table className="w-full min-w-[820px] border-collapse text-left text-[14px]">
               <caption className="sr-only">Issuer stock tokens and their lookalikes, with chain prices in USDG</caption>
               <thead className="sticky top-0 z-10 bg-[#0e0e0e]">
-                <tr className="border-b border-line text-[12px] text-muted">
+                <tr className="border-b border-line text-[13px] text-muted">
                   {["Token", "Status", "Price", "24h volume", "Liquidity", "Sell ten keeps", "Pools", ""].map((h, i) => (
                     <th key={i} scope="col" className={cx("px-4 py-3 font-medium", i >= 2 && i <= 4 && "text-right")}>
                       {h || <span className="sr-only">Actions</span>}
@@ -178,39 +178,39 @@ export function StockDesk() {
                           <TokenAvatar address={x.r.address} symbol={x.r.symbol} stock size={30} />
                           <span className="min-w-0">
                             <span className="font-mono text-[14px] font-semibold text-text">{x.r.symbol}</span>
-                            <span className="ml-2 text-[13px] text-muted">{x.r.name}</span>
-                            <span className="block font-mono text-[12px] text-muted">{short(x.r.address)}</span>
+                            <span className="ml-2 text-[14px] text-muted">{x.r.name}</span>
+                            <span className="block font-mono text-[13px] text-muted">{short(x.r.address)}</span>
                           </span>
                         </span>
                       </th>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-leaf/10 px-2.5 py-0.5 text-[12px] text-leaf">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-leaf/10 px-2.5 py-0.5 text-[13px] text-leaf">
                           <span aria-hidden>✓</span> Issuer code
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums text-text">
                         {x.r.market?.price != null ? `$${fmtNum(x.r.market.price, 2)}` : x.r.price !== null ? fmtNum(x.r.price, 2) : <span className="text-muted">no route</span>}
-                        {x.r.market?.change != null && <span className={cx("block text-[12px]", x.r.market.change >= 0 ? "text-leaf" : "text-flesh")}>{`${x.r.market.change >= 0 ? "+" : ""}${x.r.market.change.toFixed(2)}%`}</span>}
+                        {x.r.market?.change != null && <span className={cx("block text-[13px]", x.r.market.change >= 0 ? "text-leaf" : "text-flesh")}>{`${x.r.market.change >= 0 ? "+" : ""}${x.r.market.change.toFixed(2)}%`}</span>}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums text-text">{x.r.market ? usd(x.r.market.volume) : <span className="text-muted">none today</span>}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-text">{x.r.market ? usd(x.r.market.liquidity) : <span className="text-muted">—</span>}</td>
                       <td className="px-4 py-3">
                         {x.r.keep10 === null ? (
-                          <span className="text-[12px] text-muted">no quote</span>
+                          <span className="text-[13px] text-muted">no quote</span>
                         ) : (
                           <div className="w-28">
                             <Meter label={`${x.r.symbol} keeps this share of its price when ten are sold`} value={x.r.keep10} cells={10} tone={x.r.keep10 < 0.5 ? "bad" : x.r.keep10 < 0.9 ? "mid" : "good"} />
-                            <span className={cx("mt-1 block text-[12px] tabular-nums", x.r.keep10 < 0.5 ? "text-flesh" : "text-muted")}>{x.r.keep10 < 0.5 ? "thin pool" : `${Math.round(x.r.keep10 * 100)} of 100`}</span>
+                            <span className={cx("mt-1 block text-[13px] tabular-nums", x.r.keep10 < 0.5 ? "text-flesh" : "text-muted")}>{x.r.keep10 < 0.5 ? "thin pool" : `${Math.round(x.r.keep10 * 100)} of 100`}</span>
                           </div>
                         )}
                       </td>
                       <td className="px-4 py-3 tabular-nums text-text">{x.r.pools}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-right">
                         <WatchButton kind="token" value={x.r.address} label={x.r.symbol} className="mr-3" />
-                        <Link href={`/app/trade/terminal?token=${x.r.address}`} className="mr-3 text-[13px] text-muted hover:text-text">
+                        <Link href={`/app/trade/terminal?token=${x.r.address}`} className="mr-3 text-[14px] text-muted hover:text-text">
                           Chart
                         </Link>
-                        <Link href={`/app/trust/check?q=${x.r.address}`} className="text-[13px] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
+                        <Link href={`/app/trust/check?q=${x.r.address}`} className="text-[14px] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
                           Check →
                         </Link>
                       </td>
@@ -222,19 +222,19 @@ export function StockDesk() {
                           <span aria-hidden className="text-muted">↳</span>
                           <span className="min-w-0">
                             <span className="font-mono text-[14px] text-text">{x.l.symbol}</span>
-                            <span className="ml-2 text-[13px] text-muted">{x.l.name}</span>
-                            <span className="block font-mono text-[12px] text-muted">{short(x.l.address)}</span>
+                            <span className="ml-2 text-[14px] text-muted">{x.l.name}</span>
+                            <span className="block font-mono text-[13px] text-muted">{short(x.l.address)}</span>
                           </span>
                         </span>
                       </th>
                       <td className="px-4 py-2.5" colSpan={5}>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-flesh/10 px-2.5 py-0.5 text-[12px] text-flesh">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-flesh/10 px-2.5 py-0.5 text-[13px] text-flesh">
                           <span aria-hidden>✕</span> Lookalike
                         </span>
-                        <span className="ml-3 text-[13px] text-muted">{x.of ? `Same name as ${x.of}, different contract code · ${x.l.pools} pools` : `Copies an issuer name, different contract code · ${x.l.pools} pools`}</span>
+                        <span className="ml-3 text-[14px] text-muted">{x.of ? `Same name as ${x.of}, different contract code · ${x.l.pools} pools` : `Copies an issuer name, different contract code · ${x.l.pools} pools`}</span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                        <Link href={`/app/trust/check?q=${x.l.address}`} className="text-[13px] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
+                        <Link href={`/app/trust/check?q=${x.l.address}`} className="text-[14px] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
                           Check →
                         </Link>
                       </td>
@@ -246,7 +246,7 @@ export function StockDesk() {
             {!list.length && <Idle>No token matches this filter.</Idle>}
           </div>
         )}
-        <p className="border-t border-line px-4 py-3 text-[12px] text-muted">{`Price: selling one token to USDG at the latest block. Sell ten keeps: what a sale of ten fetches per token, against the price of one. No off-chain reference.${desk ? ` Updated ${ago(desk.at)}.` : ""}`}</p>
+        <p className="border-t border-line px-4 py-3 text-[13px] text-muted">{`Price: selling one token to USDG at the latest block. Sell ten keeps: what a sale of ten fetches per token, against the price of one. No off-chain reference.${desk ? ` Updated ${ago(desk.at)}.` : ""}`}</p>
       </section>
     </div>
   );

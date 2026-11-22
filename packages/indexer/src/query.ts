@@ -417,7 +417,9 @@ export function launchStats() {
   const byLauncher = new Map<string, { n: number; dead: number; known: number; last: number }>();
   let v2Known = 0,
     v2Dead = 0,
-    v4Known = 0;
+    v4Known = 0,
+    funded = 0,
+    drained = 0;
   for (const r of rows) {
     const hooked = !!r.hooks && r.hooks !== NATIVE;
     const v = `${r.kind === "v2" ? "V2" : "v4"} · ${base(r)}${hooked ? " · hook" : ""}`;
@@ -428,6 +430,9 @@ export function launchStats() {
       if (r.dead === 1) v2Dead++;
     }
     if (r.kind === "v4" && r.dead === 0) v4Known++;
+    // funded = seen with liquidity at least once (dead 0 or 1); a pool never funded stays null: empty, not drained
+    if (r.dead !== null) funded++;
+    if (r.dead === 1) drained++;
     if (r.launcher) {
       const l = byLauncher.get(r.launcher) ?? { n: 0, dead: 0, known: 0, last: 0 };
       l.n++;
@@ -466,7 +471,7 @@ export function launchStats() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
       .map(([address, n]) => ({ address, n })),
-    liveness: { v2Known, v2Dead, v4Live: v4Known },
+    liveness: { v2Known, v2Dead, v4Live: v4Known, funded, drained, empty: rows.length - funded },
   };
 }
 

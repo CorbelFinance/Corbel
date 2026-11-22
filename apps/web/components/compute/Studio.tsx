@@ -7,6 +7,7 @@
  */
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FULL_MODELS } from "@corbel/config";
 import { cx } from "@corbel/ui";
 import { CountUp } from "../app/Bay";
 import { KINDS, leadPicks, Monogram, ctxK, makerColor, makerName, money, useCatalog, type Gpu, type Model } from "./data";
@@ -121,7 +122,7 @@ export function Studio() {
         <h1 className="relative mt-2 max-w-3xl font-display text-4xl leading-[1.05] tracking-tight text-text sm:text-6xl">Every model and GPU, priced live.</h1>
         <p className="relative mt-3 max-w-2xl text-[15px] text-[#d8c2b4]">{rows ? `${rows.length} models from ${d?.makers.length} makers and ${gpus?.length ?? "…"} GPU types, at the prices the market shows right now.` : "Reading the market…"}</p>
         <p className="relative mt-2 text-[13px] text-[#d8c2b4]">
-          <span className="font-mono text-[#ff9a5c]">185 models</span> open to top holders at launch: text, pictures, video, voice and music in one chat.
+          <span className="font-mono text-[#ff9a5c]">{FULL_MODELS} models</span> open to top holders at launch: text, pictures, video, voice and music in one chat.
         </p>
         <div className="relative mt-6 flex flex-wrap gap-2">
           {TASKS.map((t) => (
@@ -154,7 +155,7 @@ export function Studio() {
                   ) : (
                     <span>
                       <span className="block text-[12px] text-muted">{`per ${PER} tokens, in / out`}</span>
-                      <span className="font-mono text-[22px] text-[#ffcfae]">{`${money(m.pin)} / ${money(m.pout)}`}</span>
+                      <span className="font-mono text-[22px] text-[#ffcfae]">{m.pin || m.pout ? `${money(m.pin)} / ${money(m.pout)}` : "Price at launch"}</span>
                     </span>
                   )}
                   <span className="text-[12px] text-[#ff9a5c] opacity-0 transition-opacity group-hover:opacity-100">Compare →</span>

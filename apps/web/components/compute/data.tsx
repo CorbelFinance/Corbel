@@ -2,6 +2,7 @@
 
 /** Shared data and helpers for the Compute pages: the model and GPU catalogues from /api/compute. */
 import { useEffect, useState } from "react";
+import { MAKER_DOMAINS } from "@/lib/makerLogos";
 
 export type Model = { id: string; name: string; maker: string; ctx: number; pin: number; pout: number; pimg: number | null; in: string[]; out: string[]; created: number; about: string; kind: "text" | "code" | "image" | "audio" | "video" | "vision"; avail?: boolean; media?: boolean };
 export type Gpu = { id: string; name: string; vram: number; secure: number | null; community: number | null; lowest: number | null };
@@ -75,7 +76,7 @@ export function Monogram({ maker, size = 34 }: { maker: string; size?: number })
   return (
     <span aria-hidden className="relative grid shrink-0 place-items-center overflow-hidden rounded-xl font-semibold" style={{ width: size, height: size, background: ok ? "#f4efe9" : `color-mix(in srgb, ${c} 18%, #120c0a)`, color: c, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${c} 35%, transparent)`, fontSize: size * 0.36 }}>
       {!ok && makerName(maker).slice(0, 2)}
-      {ok !== false && (
+      {ok !== false && maker.toLowerCase() in MAKER_DOMAINS && (
         // eslint-disable-next-line @next/next/no-img-element -- a small icon served by our own API
         <img src={`/api/maker-logo?m=${encodeURIComponent(maker)}`} alt="" width={size} height={size} onLoad={() => setOk(true)} onError={() => setOk(false)} className={ok ? "absolute inset-[18%] h-[64%] w-[64%] object-contain" : "absolute h-0 w-0 opacity-0"} />
       )}

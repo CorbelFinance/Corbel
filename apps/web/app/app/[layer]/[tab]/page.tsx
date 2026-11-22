@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { FLAGS, LAYERS, layerById } from "@corbel/config";
+import { FACTS, FLAGS, LAYERS, factText, layerById, type FactKey } from "@corbel/config";
 import { Rich, WhatCanGoWrong } from "@corbel/ui";
 import { LayerBar } from "@/components/app/Frame";
 import { SoonGate } from "@/components/app/SoonGate";
@@ -19,7 +19,10 @@ export async function generateMetadata({ params }: { params: Promise<{ layer: st
   const { layer, tab } = await params;
   const l = layerById(layer);
   const t = l?.tabs.find((x) => x.id === tab);
-  return l && t ? { title: `${l.name} · ${t.label}`, description: l.title } : {};
+  if (!l || !t) return {};
+  // each tab its own description: its first line of copy (facts filled in), else the tab named inside its layer
+  const first = t.body[0]?.replace(/\{\{(\w+)\}\}/g, (_, k: string) => (k in FACTS ? factText(k as FactKey) : "")).trim();
+  return { title: `${l.name} · ${t.label}`, description: first ? `${t.label}: ${first}` : `${t.label} in Corbel ${l.name}: ${l.title}` };
 }
 
 export default async function TabPage({ params }: { params: Promise<{ layer: string; tab: string }> }) {

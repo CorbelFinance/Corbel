@@ -75,3 +75,22 @@ describe("Corbel Score, measured caps", () => {
     expect(s.why).toMatch(/returns 6% of the cost/);
   });
 });
+
+const row = (id: string, result: Check["result"], value?: Check["value"]): Check => ({ id, name: id, result, reason: "", value });
+const base = [row("tax", "unknown"), row("owner", "pass"), row("liquidity", "unknown"), row("ticker", "pass"), row("creator", "unknown")];
+
+describe("Corbel score with seven rows", () => {
+  it("an unmeasured exit weighs nothing: same score as when the row was absent", () => {
+    const absent = score([row("honeypot", "unknown"), ...base]);
+    const unknown = score([row("honeypot", "unknown"), row("exit", "unknown"), ...base]);
+    expect(unknown.total).toBe(absent.total);
+  });
+
+  it("a honeypot never scores higher because of the exit row", () => {
+    const absent = score([row("honeypot", "fail"), ...base]);
+    const failed = score([row("honeypot", "fail"), row("exit", "fail", { share: 0 }), ...base]);
+    const unknown = score([row("honeypot", "fail"), row("exit", "unknown"), ...base]);
+    expect(failed.total).toBeLessThanOrEqual(absent.total);
+    expect(unknown.total).toBe(absent.total);
+  });
+});

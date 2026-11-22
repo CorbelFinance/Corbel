@@ -85,12 +85,15 @@ export type AiTier = {
   models: string;
   quality: string;
 };
+/** Models open to Full holders across text, pictures, video, voice and music: the one number every page uses. */
+export const FULL_MODELS = 185;
+
 export const AI_ACCESS = {
   holdDays: 7,
   lightShare: 0.3,
   tiers: [
     { id: "light", name: "Light", minCoins: 1_000, text: 50, chars: 4000, image: 5, video: 2, voice: 5, music: 0, upscale: 0, cap: 10, models: "Selected fast models in standard quality: lighter pictures, short video and voice", quality: "Standard" },
-    { id: "full", name: "Full", minCoins: 1_000_000, text: 150, chars: 8000, image: 20, video: 3, voice: 20, music: 2, upscale: 3, cap: 40, models: "All 185 models at full quality: every picture, video, voice, music and upscale model", quality: "Full" },
+    { id: "full", name: "Full", minCoins: 1_000_000, text: 150, chars: 8000, image: 20, video: 3, voice: 20, music: 2, upscale: 3, cap: 40, models: `All ${FULL_MODELS} models at full quality: every picture, video, voice, music and upscale model`, quality: "Full" },
   ] as AiTier[],
 };
 

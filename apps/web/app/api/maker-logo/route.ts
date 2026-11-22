@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { MAKER_DOMAINS } from "@/lib/makerLogos";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -8,41 +9,7 @@ export const runtime = "nodejs";
  * GET /api/maker-logo?m=anthropic → the AI maker's own icon (its site's icon), fetched once on the server and kept on
  * disk. Only makers in this list; anything else is 404 and the page shows a monogram instead.
  */
-const DOMAINS: Record<string, string> = {
-  openai: "openai.com",
-  anthropic: "anthropic.com",
-  google: "gemini.google.com",
-  "x-ai": "x.ai",
-  deepseek: "deepseek.com",
-  "meta-llama": "meta.ai",
-  meta: "meta.ai",
-  mistralai: "mistral.ai",
-  qwen: "qwen.ai",
-  moonshotai: "kimi.com",
-  "z-ai": "z.ai",
-  nvidia: "nvidia.com",
-  cohere: "cohere.com",
-  amazon: "aws.amazon.com",
-  perplexity: "perplexity.ai",
-  minimax: "minimax.io",
-  tencent: "hunyuan.tencent.com",
-  xiaomi: "mi.com",
-  baidu: "baidu.com",
-  microsoft: "microsoft.com",
-  ibm: "ibm.com",
-  kuaishou: "klingai.com",
-  bytedance: "seed.bytedance.com",
-  runway: "runwayml.com",
-  alibaba: "wan.video",
-  luma: "lumalabs.ai",
-  "black-forest-labs": "bfl.ai",
-  heygen: "heygen.com",
-  ideogram: "ideogram.ai",
-  topaz: "topazlabs.com",
-  magnific: "magnific.ai",
-  suno: "suno.com",
-  elevenlabs: "elevenlabs.io",
-};
+const DOMAINS = MAKER_DOMAINS;
 const DIR = process.env.CORBEL_DB ? join(dirname(resolve(/*turbopackIgnore: true*/ process.env.CORBEL_DB)), "logos") : resolve(/*turbopackIgnore: true*/ process.cwd(), "..", "..", "data", "logos");
 const missing = new Map<string, number>();
 

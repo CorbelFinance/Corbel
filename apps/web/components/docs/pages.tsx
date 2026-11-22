@@ -511,7 +511,7 @@ export const DOCS: Doc[] = [
               ["Pick a model and ask", "Models marked Available answer now. The answer streams in as it is written."],
             ]}
           />
-          <P>While payments are not open, each wallet gets 30 messages a day. The count resets at 00:00 UTC.</P>
+          <P>While payments are not open, a visitor without a wallet gets 3 short messages a day, a signed-in wallet 30, Light holders 50 and Full holders 150. The count resets at 00:00 UTC.</P>
         </Sec>
         <Sec id="models" n="02" title="Models">
           <P>The catalogue lists text, code, vision, image and audio models with their prices per million tokens. Open a model to set it against its nearest rivals: the same kind of model from other makers, priced as a monthly bill for the daily budget you set. Picture, film and sound models are listed as Soon until they open.</P>

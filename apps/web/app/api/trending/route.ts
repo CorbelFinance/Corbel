@@ -28,6 +28,15 @@ const state = (G.__corbelTrend ??= { snap: loadSnap<Snap>("trending"), running: 
 
 const BASE_DEC: Record<string, number> = { [RH.USDG]: 6 };
 
+/**
+ * Millions of volume from a handful of giant swaps is not flow: it is wash trading or a broken price (e.g. $50M in
+ * 24 swaps, $2M each, on a new token). Such rows leave every ranking and are listed apart with the reason, so the
+ * figure is never shown as real. The rule uses the average swap, not a wallet count: a v4 Swap event names the
+ * router that called the pool, not the trader, so "takers" undercounts people.
+ */
+const WASH_RULE = { minVolume: 1_000_000, minAvgSwap: 250_000 } as const;
+const washed = (r: TrendRow) => r.volume >= WASH_RULE.minVolume && r.volume / Math.max(1, r.swaps) >= WASH_RULE.minAvgSwap;
+
 function refresh() {
   if (state.running) return state.running;
   const client = getClient(process.env.RPC_URL);
@@ -173,7 +182,9 @@ async function handle() {
       return p ? launchpadOf(p.pad, p.hooks) : null;
     };
     xcheckTokens([...state.snap.rows.slice(0, 30), ...state.snap.stocks.slice(0, 20)].map((r) => ({ token: r.token, symbol: r.symbol, price: r.price ?? null })));
-    return Response.json({ ...state.snap, rows: state.snap.rows.map((r) => ({ ...r, pad: padOf(r.token), doubt: doubt(r.token) })), stale: !fresh });
+    const real = state.snap.rows.filter((r) => !washed(r));
+    const wash = state.snap.rows.filter(washed).map((r) => ({ token: r.token, symbol: r.symbol, volume: r.volume, takers: r.takers, swaps: r.swaps }));
+    return Response.json({ ...state.snap, rows: real.map((r) => ({ ...r, pad: padOf(r.token), doubt: doubt(r.token) })), wash, washRule: WASH_RULE, stale: !fresh });
   }
   if (state.err) return Response.json({ error: state.err }, { status: 503 });
   return Response.json({ warming: true }, { status: 202 });

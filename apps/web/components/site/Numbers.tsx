@@ -18,7 +18,7 @@ const hhmm = (t: number) => new Date(t * 1000).toISOString().slice(11, 16);
 const dayHour = (t: number) => new Date(t * 1000).toLocaleString("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
 
 type Launches = { pools: number; launchers: number; hours: { ago: number; v2: number; v4: number }[]; venues: { label: string; n: number }[]; liveness: { v2Known: number; v2Dead: number; v4Live: number } };
-type Trend = { at: number; swaps?: number; rows: { symbol: string | null; token: string; swaps: number; buys: number; volume: number }[] };
+type Trend = { at: number; swaps?: number; rows: { symbol: string | null; token: string; swaps: number; buys: number; volume: number }[]; wash?: { symbol: string | null; token: string; volume: number; swaps: number }[] };
 type Whale = { symbol: string | null; t: number; side: "buy" | "sell"; usd: number; who: string; tx: string };
 type Market = { id: number; state: string; closeAt: number; yesPot: string; noPot: string; pool: { symbol: string; baseSymbol: string } | null };
 type Entry = { id: number; minute: number; scenario: string; block: string; rule: string; traded: boolean };
@@ -173,7 +173,7 @@ export function Numbers() {
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <Panel tone={T.trade!} kicker="Trade" title="Where the volume went" note="The busiest tokens of the last day by dollar volume; the green share is buys.">
+        <Panel tone={T.trade!} kicker="Trade" title="Where the volume went" note={`The busiest tokens of the last day by dollar volume; the green share is buys.${d.trend?.wash?.length ? ` Left out as fake volume (millions from a few giant swaps): ${d.trend.wash.slice(0, 3).map((w) => w.symbol ?? w.token.slice(0, 8)).join(", ")}${d.trend.wash.length > 3 ? ` and ${d.trend.wash.length - 3} more` : ""}.` : ""}`}>
           {!d.trend && <Wait />}
           <ul className="mt-4 space-y-2">
             {top.map((r, i) => (

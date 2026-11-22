@@ -28,7 +28,7 @@ export const FAQ: {
       a: "No. When a report exists, it will be linked under Transparency.",
       link: { label: "See transparency", href: "/app/account/transparency" },
     },
-    { tag: "Product", q: "Can I talk to AI models here?", a: "Yes. AI & GPUs has a chat with every model we run. Sign in with your wallet for 30 messages a day while payments are not open. Nothing you write is kept.", link: { label: "Open the chat", href: "/app/ai/chat" } },
+    { tag: "Product", q: "Can I talk to AI models here?", a: "Yes. AI & GPUs has a chat with every model we run. Try 3 messages a day without a wallet. Sign in for 30, or 50 and 150 as a holder. Nothing you write is kept.", link: { label: "Open the chat", href: "/app/ai/chat" } },
     { tag: "Risk", q: "What can I lose?", a: "Everything you put into a strategy or a launch. The Gap Fund pays only up to what it holds." },
     {
       tag: "Access",

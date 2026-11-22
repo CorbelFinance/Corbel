@@ -82,7 +82,7 @@ export function WeekendGap() {
       {rows && (
         <>
           {rows.every((r) => r.close === null) && (
-            <p className="border-b border-line bg-flesh-deep/30 px-4 py-2.5 text-[13px] text-text">Last closes could not be read right now. Chain prices are live; the gap returns with the next read.</p>
+            <p className="border-b border-line bg-flesh-deep/30 px-4 py-2.5 text-[14px] text-text">Last closes could not be read right now. Chain prices are live; the gap returns with the next read.</p>
           )}
           {widest && (
             <p className="border-b border-line px-4 py-3 text-[14px] text-text">
@@ -100,7 +100,7 @@ export function WeekendGap() {
               <thead>
                 <tr className="border-b border-line">
                   {["Token", "Last close", "On chain now", "Gap", "Pool", ""].map((h, i) => (
-                    <th key={i} scope="col" className="px-4 py-3 font-medium text-[12px] font-normal uppercase tracking-[0.08em] text-muted">
+                    <th key={i} scope="col" className="px-4 py-3 font-medium text-[13px] font-normal uppercase tracking-[0.08em] text-muted">
                       {h}
                     </th>
                   ))}
@@ -119,20 +119,20 @@ export function WeekendGap() {
                           </span>
                         </span>
                       </th>
-                      <td className="px-4 py-2.5 font-mono text-xs text-text">
+                      <td className="px-4 py-2.5 font-mono text-[13px] text-text">
                         {r.close !== null ? `$${fmtPx(r.close)}` : "—"}
-                        {r.closeAt && <span className="block text-[12px] text-muted">{new Date(r.closeAt * 1000).toUTCString().slice(0, 11)}</span>}
+                        {r.closeAt && <span className="block text-[13px] text-muted">{new Date(r.closeAt * 1000).toUTCString().slice(0, 11)}</span>}
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-text">${fmtPx(r.chain)}</td>
+                      <td className="px-4 py-2.5 font-mono text-[13px] text-text">${fmtPx(r.chain)}</td>
                       <td className={cx("px-4 py-2.5 font-mono text-sm", r.gap === null ? "text-muted" : thin ? "text-muted" : r.gap >= 0 ? "text-leaf" : "text-flesh")}>
                         {r.gap === null ? "—" : `${r.gap >= 0 ? "+" : ""}${(r.gap * 100).toFixed(2)}%`}
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-xs">
+                      <td className="px-4 py-2.5 font-mono text-[13px]">
                         {r.liquidity === null ? <span className="text-muted">v4 · depth not read</span> : <span className={thin ? "text-flesh" : "text-text"}>{usd(r.liquidity)}</span>}
-                        {thin && <span className="block text-[12px] uppercase tracking-[0.08em] text-muted">thin: a signal, not a size</span>}
+                        {thin && <span className="block text-[13px] uppercase tracking-[0.08em] text-muted">thin: a signal, not a size</span>}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                        <Link href={`/app/trade/terminal?token=${r.token}`} className="font-medium text-[12px] uppercase tracking-[0.08em] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
+                        <Link href={`/app/trade/terminal?token=${r.token}`} className="font-medium text-[13px] uppercase tracking-[0.08em] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
                           Chart →
                         </Link>
                       </td>
@@ -143,7 +143,7 @@ export function WeekendGap() {
             </table>
           </div>
           {off.length > 0 && (
-            <p className="border-t border-line px-4 py-3 text-[13px] text-muted">
+            <p className="border-t border-line px-4 py-3 text-[14px] text-muted">
               <span className="text-text">{off.length} more</span> trade in pools too thin to price against the close:{" "}
               {off.map((r, i) => (
                 <span key={r.token}>

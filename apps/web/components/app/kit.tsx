@@ -153,12 +153,12 @@ export function Verdict({ kicker, tone = "info", value, valueLabel, facts, visua
         </div>
         <div className="lg:text-right">
           <p className={cx("font-display text-[clamp(3rem,2rem+3vw,5.2rem)] leading-none tabular-nums tracking-tight", c.text)}>{value}</p>
-          {valueLabel && <p className="mt-2 text-[13px] text-muted">{valueLabel}</p>}
+          {valueLabel && <p className="mt-2 text-[14px] text-muted">{valueLabel}</p>}
         </div>
       </div>
       {visual && <div className="px-6 pb-2 sm:px-8">{visual}</div>}
       {facts && facts.length > 0 && (
-        <p className="flex flex-wrap gap-x-6 gap-y-1 border-t border-line px-6 py-3 text-[13.5px] tabular-nums sm:px-8">
+        <p className="flex flex-wrap gap-x-6 gap-y-1 border-t border-line px-6 py-3 text-[14px] tabular-nums sm:px-8">
           {facts.map(([k, v]) => (
             <span key={k}>
               <span className="text-muted">{k}</span> <span className="text-text">{v}</span>

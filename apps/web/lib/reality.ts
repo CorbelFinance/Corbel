@@ -5,6 +5,7 @@ import { dsTokens, type DsPair } from "@/lib/pairs";
 import { briefModel, modelsReady } from "@/lib/compute";
 import { holdersBrief, holdersOf } from "@/lib/holdersOf";
 import { xPosts } from "@/lib/xPosts";
+import { safeFetch } from "./safeFetch";
 
 /**
  * Claims against reality for the project behind a token: what it says (its website and the pages it links,
@@ -50,13 +51,9 @@ function safeUrl(u: string): URL | null {
 }
 
 async function get(u: URL, ms = 9000): Promise<{ status: number; body: string } | null> {
-  try {
-    const r = await fetch(u, { headers: H, redirect: "follow", signal: AbortSignal.timeout(ms) });
-    const body = (await r.text()).slice(0, 1_500_000);
-    return { status: r.status, body };
-  } catch {
-    return null;
-  }
+  // a project's own site: public https only, every redirect checked again, cut at 1.5 MB while it streams
+  const r = await safeFetch(u, { headers: H, timeoutMs: ms, maxBytes: 1_500_000 });
+  return r ? { status: r.status, body: r.body.toString("utf8") } : null;
 }
 
 /** Visible text of an HTML page: no scripts, styles or tags, entities decoded, spaces folded. */

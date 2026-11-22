@@ -123,7 +123,7 @@ export async function POST(req: Request) {
     if (usedAll() >= PER_DAY) return Response.json({ error: "Chat is full for today. It opens again at 00:00 UTC." }, { status: 429 });
 
     if (full) {
-      // the provider's chat holds one message: the earlier turns go in as plain text above the question
+      // the model gets one message: the earlier turns go in as plain text above the question
       const last = msgs[msgs.length - 1]!.content;
       const before = msgs.slice(0, -1).filter((m) => m.role !== "system").map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`).join("\n\n");
       const prompt = before ? `The conversation so far:\n\n${before.slice(-12_000)}\n\nAnswer the user's new message:\n${last}` : last;

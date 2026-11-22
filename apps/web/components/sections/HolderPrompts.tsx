@@ -3,13 +3,13 @@
  * from farming many wallets. Every holder gets the text models; the light tier gets selected fast models in standard
  * quality; top holders get all 185 models at full quality. Live since the token launch.
  */
-import { AI_ACCESS, type AiTier } from "@corbel/config";
+import { AI_ACCESS, FULL_MODELS, type AiTier } from "@corbel/config";
 
 const fmt = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toLocaleString("en", { maximumFractionDigits: 1 })}M` : n >= 1_000 ? `${(n / 1_000).toLocaleString("en", { maximumFractionDigits: 1 })}K` : String(n));
 const cell = (n: number, unit = "") => (n ? `${n}${unit}` : "—");
 const SHOWN = AI_ACCESS.tiers;
 const ROWS: [string, (t: AiTier) => string][] = [
-  ["Models", (t) => (t.id === "full" ? "All 185" : "Selected fast models")],
+  ["Models", (t) => (t.id === "full" ? `All ${FULL_MODELS}` : "Selected fast models")],
   ["Quality", (t) => (t.id === "full" ? "Highest: sharpest pictures, full-HD video" : "Standard: lighter pictures and video")],
   ["Text messages", (t) => `${t.text} a day`],
   ["Per message", (t) => `${t.chars.toLocaleString("en")} characters`],
@@ -29,7 +29,7 @@ export function HolderPrompts() {
   return (
     <div className="mt-16 overflow-hidden rounded-2xl border border-line bg-[#0f0f0f] p-6 sm:p-8">
       <p className="font-mono text-[12px] uppercase tracking-[0.1em] text-[var(--ai)]">AI for holders · live</p>
-      <h3 className="mt-3 font-display text-[clamp(1.5rem,1rem+1.2vw,2.2rem)] leading-tight text-text">Hold Corbel. Top holders use all 185 models.</h3>
+      <h3 className="mt-3 font-display text-[clamp(1.5rem,1rem+1.2vw,2.2rem)] leading-tight text-text">Hold Corbel. {`Top holders use all ${FULL_MODELS} models.`}</h3>
       <p className="mt-2 max-w-2xl text-[14px] text-muted">Text, pictures, video, voice and music in one chat. What a wallet opens depends on the coins it holds, read from the chain.</p>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cx } from "@corbel/ui";
 import { Idle, Instrument, Led, Meter, Verdict, short } from "./kit";
-import { launchpadName, launchpadOf, launchpadTone } from "@corbel/config";
+import { DRAIN_RULE, launchpadName, launchpadOf, launchpadTone } from "@corbel/config";
 import { PadBoard } from "./PadBoard";
 
 type Stats = {
@@ -17,7 +17,7 @@ type Stats = {
   concentration: { label: string; pools: number; wallets: number }[];
   topLaunchers: { address: string; n: number; dead: number; known: number; last: number }[];
   topHooks: { address: string; n: number }[];
-  liveness: { v2Known: number; v2Dead: number; v4Live: number };
+  liveness: { v2Known: number; v2Dead: number; v4Live: number; funded?: number; drained?: number; empty?: number };
 };
 
 const BLOCK_S = 1 / 9.5; // measured on 4663 (2026-11-18): ~9.5 blocks per second
@@ -35,7 +35,7 @@ function Hourly({ hours }: { hours: Stats["hours"] }) {
   const h = hover !== null ? cols[hover]! : null;
   return (
     <div className="p-4 sm:p-5">
-      <div className="mb-3 flex min-h-5 items-baseline justify-between gap-4 font-medium text-[12px] uppercase tracking-[0.08em] text-muted">
+      <div className="mb-3 flex min-h-5 items-baseline justify-between gap-4 font-medium text-[13px] uppercase tracking-[0.08em] text-muted">
         <span>Pools created per hour</span>
         <span aria-live="polite" className="text-text">
           {h ? `${h.ago === 0 ? "This hour" : `${h.ago}h ago`} · ${h.v2 + h.v4} pools (${h.v4} v4 · ${h.v2} V2)` : `Peak ${max} / hour`}
@@ -68,7 +68,7 @@ function Hourly({ hours }: { hours: Stats["hours"] }) {
           })}
         </div>
       </div>
-      <div aria-hidden className="mt-2 flex justify-between font-medium text-[12px] uppercase tracking-[0.08em] text-muted">
+      <div aria-hidden className="mt-2 flex justify-between font-medium text-[13px] uppercase tracking-[0.08em] text-muted">
         <span>48h ago</span>
         <span>24h</span>
         <span>Now</span>
@@ -105,14 +105,14 @@ function Bars({ rows, total, caption }: { rows: { label: string; n: number; note
       <tbody>
         {rows.map((r) => (
           <tr key={r.label} className="irow border-b border-line last:border-0">
-            <th scope="row" className="w-[38%] px-4 py-2.5 text-left font-medium text-[12px] font-normal uppercase tracking-[0.06em] text-text">
+            <th scope="row" className="w-[38%] px-4 py-2.5 text-left font-medium text-[13px] font-normal uppercase tracking-[0.06em] text-text">
               {r.label}
-              {r.note && <span className="block text-[12px] normal-case tracking-normal text-muted">{r.note}</span>}
+              {r.note && <span className="block text-[13px] normal-case tracking-normal text-muted">{r.note}</span>}
             </th>
             <td className="px-2 py-2.5">
               <span aria-hidden className="block h-2 bg-leaf" style={{ width: `${(r.n / max) * 100}%` }} />
             </td>
-            <td className="w-[9.5rem] whitespace-nowrap px-4 py-2.5 text-right text-xs tabular-nums text-text">
+            <td className="w-[9.5rem] whitespace-nowrap px-4 py-2.5 text-right text-[13px] tabular-nums text-text">
               {r.n.toLocaleString("en")} <span className="text-muted">· {pct(r.n, total)}</span>
             </td>
           </tr>
@@ -164,17 +164,19 @@ export function LaunchAnalytics() {
         kicker="Launches · this week on Robinhood Chain"
         tone="bad"
         value={pct(s.liveness.v2Dead, s.liveness.v2Known)}
-        valueLabel="of new V2 pairs with known liveness are already drained"
+        valueLabel="of new V2 pairs that had liquidity are already drained"
         facts={[
           ["Pools created", s.pools.toLocaleString("en")],
           ["Last 24h", last24.toLocaleString("en")],
           ["Launch wallets", s.launchers.toLocaleString("en")],
           ["Pools per wallet", (s.pools / Math.max(1, s.launchers)).toFixed(1)],
+          ["Never got liquidity", (s.liveness.empty ?? 0).toLocaleString("en")],
           ["Serial wallets", serialWallets.toLocaleString("en")],
         ]}
       >
-        {`${s.liveness.v2Dead.toLocaleString("en")} of ${s.liveness.v2Known.toLocaleString("en")} new pairs are already drained, and ${pct(serialPools, s.pools)} of all new pools come from wallets that launched more than twenty.`}
+        {`${s.liveness.v2Dead.toLocaleString("en")} of ${s.liveness.v2Known.toLocaleString("en")} new V2 pairs that had liquidity are already drained. ${(s.liveness.empty ?? 0).toLocaleString("en")} of ${s.pools.toLocaleString("en")} new pools never got any liquidity, and ${pct(serialPools, s.pools)} of all new pools come from wallets that launched more than twenty.`}
       </Verdict>
+      <p className="text-[13px] leading-relaxed text-muted">{`Method (v${DRAIN_RULE.version}, since ${DRAIN_RULE.since}): ${DRAIN_RULE.text} ${DRAIN_RULE.before}`}</p>
       <Instrument
         code="L-01"
         title="Pools created, hour by hour"
@@ -214,7 +216,7 @@ export function LaunchAnalytics() {
               <thead>
                 <tr className="border-b border-line">
                   {["Wallet", "Pools", "Drained / known", "Last launch", ""].map((h, i) => (
-                    <th key={i} scope="col" className="px-4 py-3 font-medium text-[12px] font-normal uppercase tracking-[0.08em] text-muted">
+                    <th key={i} scope="col" className="px-4 py-3 font-medium text-[13px] font-normal uppercase tracking-[0.08em] text-muted">
                       {h || <span className="sr-only">Open</span>}
                     </th>
                   ))}
@@ -223,21 +225,21 @@ export function LaunchAnalytics() {
               <tbody>
                 {s.topLaunchers.map((l) => (
                   <tr key={l.address} className="irow border-b border-line last:border-0">
-                    <th scope="row" className="px-4 py-2.5 font-mono text-xs font-normal text-text">
+                    <th scope="row" className="px-4 py-2.5 font-mono text-[13px] font-normal text-text">
                       {short(l.address)}
                     </th>
                     <td className="px-4 py-2.5">
-                      <span className="text-xs tabular-nums text-flesh">{l.n}</span>
+                      <span className="text-[13px] tabular-nums text-flesh">{l.n}</span>
                       <div className="mt-1.5 w-24">
                         <Meter label={`${short(l.address)} pools, relative`} value={l.n / s.topLaunchers[0]!.n} cells={12} tone="bad" />
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 text-xs tabular-nums text-muted">
+                    <td className="px-4 py-2.5 text-[13px] tabular-nums text-muted">
                       {l.dead} / {l.known}
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted">{ago(s.head, l.last)}</td>
+                    <td className="px-4 py-2.5 font-mono text-[13px] text-muted">{ago(s.head, l.last)}</td>
                     <td className="px-4 py-2.5 text-right">
-                      <Link href={`/app/portfolio?address=${l.address}`} className="font-medium text-[12px] uppercase tracking-[0.08em] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
+                      <Link href={`/app/portfolio?address=${l.address}`} className="font-medium text-[13px] uppercase tracking-[0.08em] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
                         Open →
                       </Link>
                     </td>
@@ -251,7 +253,7 @@ export function LaunchAnalytics() {
           <ul className="divide-y divide-line">
             {s.topHooks.map((h) => (
               <li key={h.address} className="irow grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1.5 px-4 py-2.5">
-                <span className="flex items-center gap-2 text-xs">
+                <span className="flex items-center gap-2 text-[13px]">
                   {launchpadOf(null, h.address) ? (
                     <>
                       <i className="h-2 w-2 rounded-full" style={{ background: launchpadTone(launchpadOf(null, h.address)!) }} />
@@ -262,7 +264,7 @@ export function LaunchAnalytics() {
                   )}
                   <span className="font-mono text-muted">{short(h.address)}</span>
                 </span>
-                <span className="text-xs tabular-nums text-text">
+                <span className="text-[13px] tabular-nums text-text">
                   {h.n.toLocaleString("en")} <span className="text-muted">· {pct(h.n, s.pools)}</span>
                 </span>
                 <div className="col-span-2">

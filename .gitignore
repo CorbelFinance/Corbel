@@ -12,7 +12,8 @@ test-results
 playwright-report
 apps/web/e2e/screens/
 .DS_Store
-data/
+/data/
+apps/*/data/
 
 # local toolchain binaries
 tools/

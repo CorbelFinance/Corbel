@@ -84,6 +84,32 @@ export function Approvals() {
         </div>
       </Bay>
 
+      {!r && (
+        <section aria-label="How approvals are judged" className="overflow-hidden rounded-2xl border border-line bg-[#0e0e0e]">
+          <header className="border-b border-line px-5 py-3.5">
+            <p className="text-[15px] font-semibold text-text">How each approval is judged</p>
+            <p className="text-[13px] text-muted">Every live approval of the wallet lands in one of three rows, read from the chain, never guessed.</p>
+          </header>
+          <div className="grid divide-y divide-line md:grid-cols-3 md:divide-x md:divide-y-0">
+            {[
+              ["danger", "The spender is a plain wallet, not a contract", "A person can take the tokens whenever they like. Revoke first.", "approve → wallet 0x…"],
+              ["caution", "Unlimited to a contract few wallets use", "Unknown code may take all of the token later. Revoke if you no longer use it.", "approve → contract, ∞"],
+              ["ok", "A router or contract many wallets approve", "Expected for trading. Kept unless you want a clean slate.", "approve → known router"],
+            ].map(([k, rule, act, sig]) => (
+              <div key={k} className="space-y-2 px-5 py-4">
+                <p className={cx("font-mono text-[13px]", TONE[k as keyof typeof TONE])}>{LABEL[k as keyof typeof LABEL]}</p>
+                <p className="text-[14px] text-text">{rule}</p>
+                <p className="text-[13.5px] text-muted">{act}</p>
+                <p className="font-mono text-[12.5px] text-muted">{sig}</p>
+              </div>
+            ))}
+          </div>
+          <p className="border-t border-line px-5 py-3 text-[13.5px] text-muted">
+            Revoke sends one transaction from your own wallet: <span className="font-mono text-text">approve(spender, 0)</span>. The page only reads until you press it.
+          </p>
+        </section>
+      )}
+
       {r && (
         <Verdict
           kicker={danger ? "Act now" : caution ? "Worth a look" : "Nothing risky found"}

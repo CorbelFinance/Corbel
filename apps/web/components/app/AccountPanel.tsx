@@ -92,7 +92,7 @@ export function AccountPanel() {
       code="A-00"
       tone="moss"
       title="Saved tokens and wallets"
-      status={<Led tone={signedIn ? "on" : "off"} live={signedIn} label={signedIn ? `Signed in · ${short(auth.address!)}` : "Not signed in"} />}
+      status={<Led tone={signedIn ? "on" : "off"} live={signedIn} label={signedIn ? `Signed in · ${short(auth.address!)}` : linked?.via === "wallet" ? `Connected · ${short(linked.address)} · sign once to open` : "No wallet connected"} />}
       foot={<span>Sign-in proves you hold the address: one message, no gas, nothing moves. Only the address and your list are stored.</span>}
     >
       {!auth.ready ? (

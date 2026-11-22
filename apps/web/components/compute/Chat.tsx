@@ -1,5 +1,5 @@
 "use client";
-import { AI_ACCESS } from "@corbel/config";
+import { AI_ACCESS, FULL_MODELS } from "@corbel/config";
 
 import Link from "next/link";
 
@@ -142,7 +142,7 @@ function ModelPick({ list, value, onChange, canTop }: { list: ChatModel[]; value
                       <li key={m.id} role="option" aria-selected={m.id === value} onClick={() => (onChange(m.id), setOpen(false), setQ(""))} className={cx("flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-[#ff9a5c]/10", m.id === value && "bg-[#ff9a5c]/10")}>
                         <Monogram maker={m.maker} size={22} />
                         <span className="min-w-0 flex-1 truncate text-[13px] text-text">{m.name}</span>
-                        <span className="shrink-0 font-mono text-[12px] text-muted">{`${money(m.pin)} / ${money(m.pout)}`}</span>
+                        <span className="shrink-0 font-mono text-[12px] text-muted">{m.pin || m.pout ? `${money(m.pin)} / ${money(m.pout)}` : "Price at launch"}</span>
                       </li>
                     ))}
                 </ul>
@@ -163,7 +163,7 @@ function ModelPick({ list, value, onChange, canTop }: { list: ChatModel[]; value
               </li>
             )}
             {!shown.length && <li className="px-3 py-6 text-center text-[12.5px] text-muted">No model by that name.</li>}
-            <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">185 models</span> for Full holders ({AI_ACCESS.tiers.at(-1)!.minCoins.toLocaleString("en-US")} $CORBEL): text, pictures, video, voice and music in one chat.</li>
+            <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for Full holders ({AI_ACCESS.tiers.at(-1)!.minCoins.toLocaleString("en-US")} $CORBEL): text, pictures, video, voice and music in one chat.</li>
           </ul>
         </div>
       )}
@@ -179,7 +179,7 @@ function Unlock({ limit }: { limit: number }) {
   const [err, setErr] = useState<string | null>(null);
   return (
     <div className="chat-glass relative flex flex-wrap items-center gap-3 rounded-[22px] p-3 pl-5">
-      <span className="min-w-0 flex-1 text-[13.5px] text-[#e9d6c8]">{linked?.via === "wallet" ? "One signature and you can write: a message, not a transaction." : `Connect a wallet to write. ${limit} messages a day, free while payments are not open.`}</span>
+      <span className="min-w-0 flex-1 text-[13.5px] text-[#e9d6c8]">{linked?.via === "wallet" ? "One signature and you can write: a message, not a transaction." : `Connect a wallet to write. Messages a day: ${limit} with a wallet, ${AI_ACCESS.tiers.map((t) => `${t.text} for ${t.name} holders`).join(", ")}. Free while payments are not open.`}</span>
       {linked?.via === "wallet" ? (
         <button type="button" onClick={() => void auth.signIn(linked.address, linked.rdns).then(setErr)} className="h-11 rounded-full bg-[#ff9a5c] px-6 text-[14px] font-semibold text-[#1a0d06] hover:bg-[#ffb07e]">
           Sign in to chat
@@ -631,7 +631,7 @@ export function Chat() {
                         </li>
                       );
                     })}
-                  <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">185 models</span> for Full holders ({AI_ACCESS.tiers.at(-1)!.minCoins.toLocaleString("en-US")} $CORBEL): Veo, Sora, Kling, Runway, Flux and more, in full quality.</li>
+                  <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for Full holders ({AI_ACCESS.tiers.at(-1)!.minCoins.toLocaleString("en-US")} $CORBEL): Veo, Sora, Kling, Runway, Flux and more, in full quality.</li>
                 </ul>
               )}
             </div>
@@ -647,7 +647,7 @@ export function Chat() {
             <span className="chat-glass ml-auto rounded-full px-3 py-1.5 text-[12.5px] text-muted">{`${minfo.left[mode] ?? 0} of ${minfo.limits[mode] ?? 0} today`}</span>
           )}
           {!signedIn && mode === "text" && info?.guestLeft != null && (
-            <span className="chat-glass ml-auto rounded-full px-3 py-1.5 font-mono text-[12px] text-muted">{`${guestLeft} of ${info.guestPerDay ?? 0} free today · sign in for more`}</span>
+            <span className="chat-glass ml-auto rounded-full px-3 py-1.5 font-mono text-[12px] text-muted">{`${guestLeft} of ${info.guestPerDay ?? 0} free today without a wallet · ${info.limit} a day with one`}</span>
           )}
           {signedIn && mode === "text" && info?.left != null && (
             <span className="chat-glass ml-auto flex items-center gap-2 rounded-full px-3 py-1.5 font-mono text-[12px] text-muted">

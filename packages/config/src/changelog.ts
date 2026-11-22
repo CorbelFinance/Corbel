@@ -13,6 +13,23 @@ export type ShipDay = { day: string; items: Ship[] };
 
 export const CHANGELOG: ShipDay[] = [
   {
+    day: "2026-11-22",
+    items: [
+      { block: "check", kind: "fix", icon: "scan", title: "Drained means drained", tags: ["report"], line: "A pool now counts as drained only if it once had liquidity and lost it; a pair that never got liquidity is counted as empty. Until today empty pairs were counted as drained too, so earlier drained figures, including ones we posted, were much higher. Launch outcomes, the accuracy page, the survival league and the home page use the new count, and each says which method it follows.", href: "/app/trust/launches" },
+      { block: "check", kind: "new", icon: "layers", title: "Pairs that never got liquidity", line: "Launch outcomes now show how many new pools never got any liquidity at all, next to the share of funded pairs that were drained, so an empty pair is never mistaken for a rug.", href: "/app/trust/launches" },
+      { block: "check", kind: "fix", icon: "scan", title: "Token check in the overview", line: "The quick check on the overview no longer jumps when you pick a token: it keeps its size, lights each read in turn while the chain is read, and says plainly when a ticker has no indexed token.", href: "/app/overview" },
+      { block: "check", kind: "fix", icon: "scan", title: "Seven checks, always seven", line: "The token check now always shows all seven rows: an exit that could not be measured says so instead of disappearing, and the score reads 53/90, out of a possible 90.", href: "/app/trust/check" },
+      { block: "check", kind: "fix", icon: "radar", title: "Fake volume left out", line: "Tokens whose millions of volume came from a handful of giant swaps no longer top the Radar. They are listed apart with the reason. The Traders column became Avg swap: a pool event names the router, not the person.", href: "/app/trust/radar" },
+      { block: "earn", kind: "fix", icon: "layers", title: "Pool fees say how many days they cover", line: "Pool fees never say \"last 0 days\" again: a headline over the day-by-day record waits for three full days, and until then the one-day rate says plainly that it is one day.", href: "/app/account/pools" },
+      { block: "site", kind: "better", icon: "doc", title: "Bigger text, one menu", line: "Body text on Radar, Launches, Pools and Stocks is 14 px. On wide screens the left rail is the menu and the bar above keeps only the numbered path, so each place has one way in. Approvals explains how each approval is judged before you paste a wallet.", href: "/app/wallet/approvals" },
+      { block: "check", kind: "fix", icon: "scan", title: "Not a token, said plainly", line: "An address with no token code, such as the zero address or a wallet, now reads \"not a token\" with no score, instead of \"can be sold, but checks failed\".", href: "/app/trust/check" },
+      { block: "check", kind: "fix", icon: "radar", title: "One wallet's round trips flagged", line: "Big swaps says when one wallet made most of the dollars and shows the totals without it. Analytics lists the tokens left out as fake volume.", href: "/analytics" },
+      { block: "compute", kind: "fix", icon: "spark", title: "One count of models, one chat limit", line: "The models page counts the same way everywhere: open right now, open for chat, priced in the catalogue. The chat names its whole ladder of daily messages in one line: without a wallet, with one, and for each holder tier. A model without a price says \"Price at launch\".", href: "/app/ai/models" },
+      { block: "site", kind: "fix", icon: "doc", title: "Small fixes across the site", line: "No raw placeholders on layer pages, no wrapped Open App button, docs and the roadmap fit a phone, maker icons are requested only when we have them, and each app page has its own description.", href: "/roadmap" },
+      { block: "site", kind: "better", icon: "doc", title: "Open code, one clean history", line: "The code is public on GitHub under MIT, in one clean history, with a README that covers every section. Changelog proofs that pointed at single commits now point at the repository.", href: "https://github.com/CorbelFinance/Corbel", proof: [{ label: "GitHub", href: "https://github.com/CorbelFinance/Corbel" }] },
+    ],
+  },
+  {
     day: "2026-11-21",
     items: [
       { block: "trade", kind: "new", icon: "layers", title: "Sell many", line: "Pick several small holdings and sell them into ETH one after another from your own wallet, each quoted at the latest block on its best route. Every approval and sale is signed by you; a token whose best route is a v4 pool is skipped, with the reason.", href: "/app/trade/many" },

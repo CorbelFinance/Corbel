@@ -32,7 +32,7 @@ Rebuild the simulator: `node packages/data/contracts/compile.cjs packages/data/c
 
 ## Liveness
 
-In follow mode the indexer re-reads pools in rotating batches of 600 every 2 minutes (`dead`, `checked_at` columns). V2: dead when the WETH/USDG side is below 1/1000 of the thin threshold. v4: live when liquidity is in range, otherwise unknown (`null`). Zero in-range liquidity is not proof of death, because a swap crosses ticks to reach positions further out. Creator history counts drained pools only among those whose liveness is known. One-off refresh: `pnpm --filter @corbel/indexer start --once --refresh`.
+In follow mode the indexer re-reads pools in rotating batches of 600 every 2 minutes (`dead`, `checked_at` columns). A pool is `funded` once it is seen with liquidity at its current price (V2: both reserves, the WETH/USDG side above 1/1000 of the thin threshold; v4: in-range liquidity above zero). A funded pool later found dry is dead (drained); for v4 only when its ModifyLiquidity events show liquidity taken out. A pool never seen funded stays `null`: empty, not drained. This is rule v2 (since 22 Nov 2026); rule v1 counted empty pairs as drained, so figures before that date were higher. Zero in-range liquidity is not proof of death, because a swap crosses ticks to reach positions further out. Creator history counts drained pools only among those whose liveness is known. One-off refresh: `pnpm --filter @corbel/indexer start --once --refresh`.
 
 ## Endpoints (all read-only, same origin)
 

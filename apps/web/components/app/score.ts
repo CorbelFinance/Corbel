@@ -105,7 +105,8 @@ export function score(checks: Check[], holders?: HoldersIn | null, market?: Mark
     let sum = 0, w = 0;
     for (const [id, wt] of Object.entries(p.checks) as [string, number][]) {
       const c = by.get(id);
-      if (!c) continue;
+      // an exit that could not be measured is shown as a row but weighs nothing: it must never lift a honeypot's score
+      if (!c || (id === "exit" && c.result === "unknown")) continue;
       // liquidity: the USD depth across every venue is the measure when known ($1K = 0, $1M = 100, log scale),
       // with the LP lock of the measured pool as 30%; one thin pool never stands for a token traded elsewhere
       const depth = market && market.liquidity > 0 ? clamp(((Math.log10(market.liquidity) - 3) / 3) * 100) : null;

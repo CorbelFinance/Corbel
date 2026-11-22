@@ -6,6 +6,7 @@ import { parseAbi } from "viem";
 import { guardWait } from "@/lib/guard";
 import { padArt, padArtReady } from "@/lib/padArt";
 import { keepLogos } from "@/lib/logoKeeper";
+import { safeFetch } from "@/lib/safeFetch";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,10 +24,11 @@ const KEEP_PX = 128;
 const inflight = new Map<string, Promise<Buffer | null>>();
 
 async function fetchOnce(url: string): Promise<Buffer | null> {
-  const r = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(15_000) }).catch(() => null);
-  if (!r?.ok) return null;
-  const type = r.headers.get("content-type") ?? "";
-  const b = Buffer.from(await r.arrayBuffer());
+  // the image URL is the project's choice: public https only, redirects checked, cut at the cap while it streams
+  const r = await safeFetch(url, { headers: { "user-agent": "Mozilla/5.0" }, timeoutMs: 15_000, maxBytes: MAX_BYTES });
+  if (!r || r.status !== 200 || r.cut) return null;
+  const type = r.type;
+  const b = r.body;
   // some gateways send images as octet-stream: trust the bytes, not the header
   if (!/^image\/(png|jpeg|webp|gif)/.test(type) && !typeOf(b)) return null;
   return b.length > 0 && b.length <= MAX_BYTES ? shrink(b) : null;
