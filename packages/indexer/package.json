@@ -1,0 +1,26 @@
+{
+  "name": "@corbel/indexer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/query.ts"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=../../.env --env-file-if-exists=../../apps/web/.env.local --experimental-strip-types --no-warnings src/run.ts",
+    "typecheck": "tsc -p .",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@corbel/data": "workspace:*",
+    "viem": "2.57.19"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "vitest": "5.1.0",
+    "eslint": "9.39.5",
+    "typescript-eslint": "8.72.2",
+    "typescript": "6.0.3"
+  }
+}

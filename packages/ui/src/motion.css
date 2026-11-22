@@ -1,0 +1,63 @@
+/* Motion layer. Content is always visible; motion lives inside illustrations, not in hiding blocks. */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Blocks are never hidden while scrolling: everything is on the page from the first paint. */
+
+  /* Word reveal: fallback = staggered transition on enter */
+  /* Words go from --muted (7:1) to --text, so every state passes contrast */
+  html.js [data-words] .word {
+    color: var(--muted);
+    transition: color 0.6s ease calc(var(--i) * 35ms);
+  }
+  html.js [data-words][data-in] .word {
+    color: var(--text);
+  }
+
+  /* Where scroll-driven animation exists, tie each word to the paragraph's view timeline */
+  @supports (animation-timeline: view()) {
+    html.js [data-words] {
+      view-timeline-name: --words;
+    }
+    html.js [data-words] .word,
+    html.js [data-words][data-in] .word {
+      color: var(--muted);
+      transition: none;
+      animation: word-in linear both;
+      animation-timeline: --words;
+      animation-range: cover calc(18% + var(--i) / var(--n) * 30%) cover calc(22% + var(--i) / var(--n) * 30%);
+    }
+  }
+
+  .marquee-track {
+    animation: marquee var(--speed, 40s) linear infinite;
+  }
+  .marquee-reverse {
+    animation-direction: reverse;
+  }
+  .marquee:hover .marquee-track {
+    animation-play-state: paused;
+  }
+
+  /* Inactive steps dim by colour, not opacity, so they keep 4.5:1 */
+  .pinned-step * {
+    transition: color 0.5s ease;
+  }
+  html.js .pinned .pinned-step:not([data-active]) * {
+    color: var(--muted);
+  }
+  html.js .pinned .pinned-step:not([data-active]) h3 {
+    color: color-mix(in srgb, var(--muted) 70%, var(--text));
+  }
+}
+
+@keyframes word-in {
+  to {
+    color: var(--text);
+  }
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
