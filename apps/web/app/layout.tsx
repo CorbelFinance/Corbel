@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import { BRAND } from "@corbel/config";
 import { PREFS_SCRIPT } from "@/lib/prefsScript";
 import { DevKit } from "@/components/devkit/DevKit";
+import { ChainWarmup } from "@/components/app/ChainWarmup";
 import "./globals.css";
 
 // Self-hosted (app/fonts, latin subset): the build and the site never call Google.
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         {children}
         <div aria-hidden className="grain" />
+        <ChainWarmup />
         <DevKit />
         <Tracker />
       </body>
