@@ -73,7 +73,30 @@ export default function Roadmap() {
       </header>
 
       {/* the map: three zones (live, building, planned); each block is a rail through them, each item a node in its zone */}
-      <section aria-label="The map" className="rmap relative mt-14 overflow-hidden rounded-[28px] border border-[#242424] bg-[#0d0d0d]">
+      {/* phones: the map as counts per block (every item is listed below), never a table cut at the screen edge */}
+      <section aria-label="The map, in short" className="mt-10 overflow-hidden rounded-[22px] border border-[#242424] bg-[#0d0d0d] md:hidden">
+        <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,4.6rem)] border-b border-[#1f1f1f] px-4 py-3 font-mono text-[12px] uppercase tracking-[0.1em] text-muted">
+          <span>Block</span>
+          {ROAD_STAGES.map((s) => (
+            <span key={s.id} className="text-right">{s.short}</span>
+          ))}
+        </div>
+        <ul>
+          {blocks.map((b) => (
+            <li key={b.id} className="grid grid-cols-[minmax(0,1fr)_repeat(3,4.6rem)] items-center border-b border-[#1a1a1a] px-4 py-3 last:border-0">
+              <a href={`#${b.id}`} className="flex min-w-0 items-center gap-2.5 text-[14px] text-text">
+                <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: b.tone }} />
+                <span className="truncate">{b.label}</span>
+              </a>
+              {ROAD_STAGES.map((s) => (
+                <span key={s.id} className={cx("text-right font-display text-xl tabular-nums", STAGE_TEXT[s.id])}>{b.items.filter((x) => x.stage === s.id).length}</span>
+              ))}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-label="The map" className="rmap relative mt-14 hidden overflow-hidden rounded-[28px] border border-[#242424] bg-[#0d0d0d] md:block">
         <div className="overflow-x-auto">
           <div className="min-w-[760px]">
             <div className="grid grid-cols-[10rem_1.5fr_1fr_1fr] border-b border-[#1f1f1f]">

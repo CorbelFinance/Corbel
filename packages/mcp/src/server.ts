@@ -47,7 +47,7 @@ const TOOLS: Tool[] = [
         pay: { type: "string", enum: ["USDG", "ETH", "WETH"], default: "USDG" },
         amount: { type: "string", description: "What the agent puts in: pay units on a buy, token units on a sell" },
         maxIn: { type: "string", description: "Largest trade allowed, optional" },
-        minScore: { type: "number", description: "Lowest Corbel Score, 0 to 100", default: 60 },
+        minScore: { type: "number", description: "Lowest Corbel Score, 0 to 90", default: 60 },
         maxImpact: { type: "number", description: "Largest price impact as a fraction, 0.02 = 2%", default: 0.02 },
         must: { type: "string", description: "Checks that may not fail, comma-separated", default: "honeypot,tax,exit" },
         noHooks: { type: "boolean", description: "Refuse routes through v4 hooks", default: true },

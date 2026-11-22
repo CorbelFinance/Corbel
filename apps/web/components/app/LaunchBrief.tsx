@@ -102,12 +102,12 @@ export function LaunchBrief({ logOnly = false, verdict = true }: { logOnly?: boo
 
   const log = (
     <div className={cx("bg-[#0a0a0a] px-5 py-4", logOnly && "flex h-full flex-col")}>
-      <p className="flex items-center gap-2 font-mono text-[12px] text-muted">
+      <p className="flex items-center gap-2 font-mono text-[13px] text-muted">
         <span className={cx("h-1.5 w-1.5 rounded-full", b ? "bg-leaf" : "bg-[#303030]")} />
         {`launch agent · last 24h · ${b ? (mins ? `${mins} min ago` : "just now") : "reading"}`}
         <span className="ml-auto">{b ? (b.by === "agent" ? "written by the agent" : "written by rules") : ""}</span>
       </p>
-      <div className={cx("mt-3 space-y-1.5 font-mono text-[13.5px] leading-snug", logOnly && "flex-1")} aria-live="polite">
+      <div className={cx("mt-3 space-y-1.5 font-mono text-[14px] leading-snug", logOnly && "flex-1")} aria-live="polite">
         {err && !b && <p className="text-muted">The agent has not read the launches yet.</p>}
         {!b &&
           !err &&
@@ -123,13 +123,13 @@ export function LaunchBrief({ logOnly = false, verdict = true }: { logOnly?: boo
       </div>
       {b?.byPad && b.byPad.length > 0 && (
         <div className="mt-4 border-t border-[#1a1a1a] pt-3">
-          <p className="flex items-baseline justify-between text-[12px] text-muted">
+          <p className="flex items-baseline justify-between text-[13px] text-muted">
             Where they came from
             <span>24h · last hour</span>
           </p>
           <ul className="mt-2 space-y-1.5">
             {b.byPad.map((p, i) => (
-              <li key={p.name} className="grid grid-cols-[8rem_minmax(0,1fr)_3.4rem_2.8rem] items-center gap-3 text-[13px]">
+              <li key={p.name} className="grid grid-cols-[8rem_minmax(0,1fr)_3.4rem_2.8rem] items-center gap-3 text-[14px]">
                 <span className="truncate text-text">{p.name}</span>
                 <span className="relative h-2 overflow-hidden rounded-full bg-[#161616]">
                   <span className="bar-grow absolute inset-y-0 left-0 rounded-full bg-[#7d8a83]" style={{ width: `${(p.day / (b.byPad![0]!.day || 1)) * 100}%`, animationDelay: `${i * 0.06}s` }} />
@@ -183,7 +183,7 @@ export function LaunchBrief({ logOnly = false, verdict = true }: { logOnly?: boo
         <div className="border-t border-line bg-[#0e0e0e] lg:border-l lg:border-t-0">
           <div className="px-5 py-4">
             <p className="text-[14px] font-semibold text-text">What it flagged</p>
-            {b && !groups.length && <p className="mt-2 text-[13px] text-muted">Nothing out of line in the last day.</p>}
+            {b && !groups.length && <p className="mt-2 text-[14px] text-muted">Nothing out of line in the last day.</p>}
             <ul className="mt-3 space-y-2">
               {groups.map((g) => {
                 const open = openKind === g.k;
@@ -193,13 +193,13 @@ export function LaunchBrief({ logOnly = false, verdict = true }: { logOnly?: boo
                       <button type="button" aria-expanded={open} onClick={() => setOpenKind(open ? null : g.k)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                         <span className={cx("font-display text-[24px] leading-none tabular-nums", danger(g.k) ? "text-flesh" : "text-[#e3b341]")}>{g.list.length}</span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-[13.5px] text-text">{GROUP[g.k]}</span>
-                          <span className="block truncate text-[12px] text-muted">{g.list[0]!.title}</span>
+                          <span className="block text-[14px] text-text">{GROUP[g.k]}</span>
+                          <span className="block truncate text-[13px] text-muted">{g.list[0]!.title}</span>
                         </span>
-                        {g.list.length > 1 && <span className="text-[12px] text-muted">{open ? "Hide" : "All"}</span>}
+                        {g.list.length > 1 && <span className="text-[13px] text-muted">{open ? "Hide" : "All"}</span>}
                       </button>
                       {g.list[0]!.token && (
-                        <Link href={`/app/trust/check?q=${g.list[0]!.token}`} className="text-[13px] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
+                        <Link href={`/app/trust/check?q=${g.list[0]!.token}`} className="text-[14px] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
                           Check →
                         </Link>
                       )}
@@ -207,18 +207,18 @@ export function LaunchBrief({ logOnly = false, verdict = true }: { logOnly?: boo
                     {open && (
                       <ul className="pane-in border-t border-line/60 px-3 py-2">
                         {g.list.map((f, i) => (
-                          <li key={i} className="flex items-center gap-3 py-1.5 text-[13px]">
+                          <li key={i} className="flex items-center gap-3 py-1.5 text-[14px]">
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-text">{f.title}</span>
-                              <span className="block truncate text-[12px] text-muted">{f.note}</span>
+                              <span className="block truncate text-[13px] text-muted">{f.note}</span>
                             </span>
                             {f.creator && (
-                              <a href={`${SCAN}${f.creator}`} target="_blank" rel="noreferrer" className="text-[12px] text-muted underline underline-offset-2">
+                              <a href={`${SCAN}${f.creator}`} target="_blank" rel="noreferrer" className="text-[13px] text-muted underline underline-offset-2">
                                 creator ↗
                               </a>
                             )}
                             {f.token && (
-                              <Link href={`/app/trust/check?q=${f.token}`} className="text-[12px] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
+                              <Link href={`/app/trust/check?q=${f.token}`} className="text-[13px] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
                                 Check →
                               </Link>
                             )}
@@ -235,18 +235,18 @@ export function LaunchBrief({ logOnly = false, verdict = true }: { logOnly?: boo
           <div className="border-t border-line px-5 py-4">
             <p className="flex items-baseline justify-between text-[14px] font-semibold text-text">
               Near graduation
-              <span className="text-[12px] font-normal text-muted">{b?.onCurve ? `${b.onCurve} on a curve` : ""}</span>
+              <span className="text-[13px] font-normal text-muted">{b?.onCurve ? `${b.onCurve} on a curve` : ""}</span>
             </p>
-            {b && !b.near?.length && <p className="mt-2 text-[13px] text-muted">{b.onCurve ? "No curve is close to full yet." : "No token is on a launch curve right now."}</p>}
+            {b && !b.near?.length && <p className="mt-2 text-[14px] text-muted">{b.onCurve ? "No curve is close to full yet." : "No token is on a launch curve right now."}</p>}
             <ul className="mt-2 space-y-2">
               {b?.near?.slice(0, 5).map((n) => (
                 <li key={n.token}>
                   <Link href={`/app/trust/check?q=${n.token}`} className="block rounded-lg px-1 py-1 hover:bg-leaf/[0.04]">
-                    <span className="flex items-center gap-2 text-[13px]">
+                    <span className="flex items-center gap-2 text-[14px]">
                       <TokenAvatar address={n.token} symbol={n.symbol} size={18} />
                       <span className="truncate font-mono text-text">{n.symbol ?? "?"}</span>
-                      <span className="truncate text-[12px] text-muted">{`${n.pad}${n.ago ? ` · ${age(n.ago)}` : ""}`}</span>
-                      <span className="ml-auto font-mono text-[13px] text-text">{`${Math.round(n.sold * 100)}%`}</span>
+                      <span className="truncate text-[13px] text-muted">{`${n.pad}${n.ago ? ` · ${age(n.ago)}` : ""}`}</span>
+                      <span className="ml-auto font-mono text-[14px] text-text">{`${Math.round(n.sold * 100)}%`}</span>
                     </span>
                     <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[#1f1f1f]">
                       <span className="bar-grow block h-full rounded-full bg-leaf" style={{ width: `${n.sold * 100}%` }} />

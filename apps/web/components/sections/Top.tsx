@@ -37,7 +37,9 @@ export function Hero() {
         <div className="pointer-events-none flex flex-1 flex-col items-center justify-center py-16 text-center">
           <h1 className="font-display pointer-events-auto text-[clamp(2.6rem,0.6rem+6vw,7rem)] leading-[0.95] text-text [text-shadow:0_0_40px_var(--bg)]">
             <span className="hero-line md:whitespace-nowrap">
-              <span>Check. Swap. Earn.</span>
+              <span>
+                <em className="not-italic text-[#6fe7a8]">Check.</em> Swap. Earn.
+              </span>
             </span>
             <span className="hero-line pb-[0.08em] md:whitespace-nowrap">
               <span>

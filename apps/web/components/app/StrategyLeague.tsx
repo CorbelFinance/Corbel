@@ -34,7 +34,7 @@ export function StrategyLeague() {
       title="Survival league"
       busy={!l && !err}
       status={<Led tone={l ? "on" : "off"} label={l ? `${fmt(l.pools)} pools · last ${l.days} days` : "Reading the index"} />}
-      foot={<span>Paper only. Each rule decides from what was on chain when the pool appeared. Ranked by the share of its picks later found drained: a survivor is not a profit. Refreshed every five minutes.</span>}
+      foot={<span>Paper only. Each rule decides from what was on chain when the pool appeared. Ranked by the share of its picks later found drained (a pool that had liquidity and lost it; method since 22 Nov 2026): a survivor is not a profit. Refreshed every five minutes.</span>}
     >
       {err && <p className="p-5 text-[13.5px] text-flesh">{err}</p>}
       {l && !l.ready && (

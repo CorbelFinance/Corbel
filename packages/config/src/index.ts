@@ -8,3 +8,4 @@ export * from "./roadmap";
 export * from "./changelog";
 export * from "./launchpads";
 export * from "./holderAccess";
+export * from "./method";

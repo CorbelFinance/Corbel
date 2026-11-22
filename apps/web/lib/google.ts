@@ -18,7 +18,7 @@ export const googleOn = () => !!process.env.GOOGLE_CLIENT_ID && !!process.env.GO
 const b64 = (b: Buffer) => b.toString("base64url");
 const redirectUri = (origin: string) => `${origin}/api/auth/google/callback`;
 
-/** The public origin as the visitor sees it (behind the proxy the request URL is the local one). */
+/** The public origin as the visitor sees it (the request URL can be an internal one). */
 export function originOf(req: Request) {
   const u = new URL(req.url);
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? u.host;

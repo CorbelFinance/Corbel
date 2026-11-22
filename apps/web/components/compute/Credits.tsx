@@ -80,7 +80,7 @@ export function Credits() {
                 </span>
                 <span className="text-right">
                   <span className="block font-mono text-[18px] text-[#ffcfae]">
-                    <CountUp value={b.n} fmt={(n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n >= 10 ? Math.round(n).toLocaleString("en") : n.toFixed(1))} />
+                    <CountUp value={b.n} fmt={(n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n >= 10 ? Math.round(n).toLocaleString("en") : n.toFixed(1))} />
                   </span>
                   <span className="block text-[12px] text-muted">{b.unit}</span>
                 </span>

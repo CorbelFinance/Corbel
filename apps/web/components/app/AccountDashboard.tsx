@@ -163,7 +163,7 @@ export function AccountDashboard() {
           <p className="mt-0.5 flex flex-wrap gap-x-3 font-mono text-[12px] text-muted">
             <span>{quick ? (quick.isContract ? "contract" : "wallet") : "reading"}</span>
             <span>{linked?.address.toLowerCase() === addr.toLowerCase() ? (linked.via === "wallet" ? `linked · ${linked.name ?? "wallet"}` : "watching") : "pasted"}</span>
-            <span className={signed ? "text-leaf" : ""}>{signed ? "signed in" : "not signed in"}</span>
+            <span className={signed ? "text-leaf" : ""}>{signed ? "signed in" : linked?.via === "wallet" && linked.address.toLowerCase() === addr.toLowerCase() ? "connected, sign once to open the account" : "read only"}</span>
             {quick?.block && <span>{`block ${Number(quick.block).toLocaleString("en")}`}</span>}
           </p>
         </div>

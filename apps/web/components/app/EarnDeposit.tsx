@@ -203,7 +203,7 @@ export function EarnDeposit({ pair, token, symbol, base, apr }: { pair: string; 
   return (
     <div className="space-y-3">
       <label className="block rounded-2xl border border-line bg-[#090909] p-3.5 focus-within:border-ui/60">
-        <span className="flex justify-between text-[12px] text-muted">
+        <span className="flex justify-between text-[13px] text-muted">
           You put in
           <span className="font-mono">{usdIn ? `≈ $${usdIn.toLocaleString("en", { maximumFractionDigits: 2 })}` : ""}</span>
         </span>
@@ -214,13 +214,13 @@ export function EarnDeposit({ pair, token, symbol, base, apr }: { pair: string; 
       </label>
       <div className="flex gap-1.5">
         {quick.map((v) => (
-          <button key={v} type="button" onClick={() => setAmt(v)} className={cx("flex-1 rounded-lg border py-1 font-mono text-[12px]", amt === v ? "border-leaf text-text" : "border-line text-muted hover:text-text")}>
+          <button key={v} type="button" onClick={() => setAmt(v)} className={cx("flex-1 rounded-lg border py-1 font-mono text-[13px]", amt === v ? "border-leaf text-text" : "border-line text-muted hover:text-text")}>
             {v}
           </button>
         ))}
       </div>
       <div className="rounded-xl border border-line bg-[#0c0c0c] p-3">
-        <p className="flex items-center justify-between font-mono text-[12px] uppercase tracking-[0.08em] text-muted">
+        <p className="flex items-center justify-between font-mono text-[13px] uppercase tracking-[0.08em] text-muted">
           <span>Fees at the last 30 days</span>
           <span className="flex gap-1">
             {[1, 7, 30].map((d) => (
@@ -234,35 +234,35 @@ export function EarnDeposit({ pair, token, symbol, base, apr }: { pair: string; 
           <span className="text-[20px] text-text">{`$${usdIn.toFixed(2)}`}</span>
           <span className="text-leaf">→</span>
           <span className="text-[20px] text-leaf">{`+$${fees.toFixed(fees < 1 ? 3 : 2)}`}</span>
-          <span className="text-[12px] text-muted">{`in ${days === 1 ? "a day" : `${days} days`}, if it pays like the last 30`}</span>
+          <span className="text-[13px] text-muted">{`in ${days === 1 ? "a day" : `${days} days`}, if it pays like the last 30`}</span>
         </p>
         <div className="mt-3 border-t border-line pt-3">
-          <p className="flex justify-between font-mono text-[12px] text-muted">
+          <p className="flex justify-between font-mono text-[13px] text-muted">
             <span className="uppercase tracking-[0.08em]">{`If ${symbol} moves`}</span>
             <span className={cx(move > 0 ? "text-leaf" : move < 0 ? "text-flesh" : "text-text")}>{`${move > 0 ? "+" : ""}${Math.round(move * 100)}%`}</span>
           </p>
           <input type="range" min={-90} max={300} step={5} value={Math.round(move * 100)} onChange={(e) => setMove(Number(e.target.value) / 100)} aria-label={`Price move of ${symbol} in percent`} className="mt-2 w-full accent-[var(--leaf)]" />
-          <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-[12.5px]">
+          <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-[13px]">
             <p>
-              <span className="block text-[11.5px] text-muted">Just holding</span>
+              <span className="block text-[13px] text-muted">Just holding</span>
               <span className="text-text">{`$${pv.hold.toFixed(2)}`}</span>
             </p>
             <p>
-              <span className="block text-[11.5px] text-muted">In the pool</span>
+              <span className="block text-[13px] text-muted">In the pool</span>
               <span className="text-text">{`$${pv.pool.toFixed(2)}`}</span>
             </p>
             <p>
-              <span className="block text-[11.5px] text-muted">Pool + fees vs hold</span>
+              <span className="block text-[13px] text-muted">Pool + fees vs hold</span>
               <span className={cx(pv.pool + fees >= pv.hold ? "text-leaf" : "text-flesh")}>{`${pv.pool + fees - pv.hold >= 0 ? "+" : "−"}$${Math.abs(pv.pool + fees - pv.hold).toFixed(2)}`}</span>
             </p>
           </div>
-          <p className="mt-1.5 text-[11.5px] leading-relaxed text-[#7d8a83]">Any move away from today&apos;s price leaves the pool behind simply holding. The fees have to make up that gap.</p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-[#7d8a83]">Any move away from today&apos;s price leaves the pool behind simply holding. The fees have to make up that gap.</p>
         </div>
       </div>
-      <div className={cx("rounded-xl border p-3 text-[12.5px]", fails.length ? "border-flesh/50 bg-flesh-deep/30" : "border-line")}>
+      <div className={cx("rounded-xl border p-3 text-[13px]", fails.length ? "border-flesh/50 bg-flesh-deep/30" : "border-line")}>
         <p className="flex items-center justify-between gap-3">
-          <span className="font-mono text-[12px] uppercase tracking-[0.08em] text-muted">{`Token check · ${symbol}`}</span>
-          <a href={`/app/trust/check?q=${token}`} className="text-[12px] text-leaf hover:underline">Full check →</a>
+          <span className="font-mono text-[13px] uppercase tracking-[0.08em] text-muted">{`Token check · ${symbol}`}</span>
+          <a href={`/app/trust/check?q=${token}`} className="text-[13px] text-leaf hover:underline">Full check →</a>
         </p>
         <p className="mt-1">
           {!check ? (
@@ -276,7 +276,7 @@ export function EarnDeposit({ pair, token, symbol, base, apr }: { pair: string; 
           )}
         </p>
         {fails.length > 0 && (
-          <label className="mt-2 flex items-start gap-2 text-[12.5px] text-text">
+          <label className="mt-2 flex items-start gap-2 text-[13px] text-text">
             <input type="checkbox" checked={okFlags} onChange={(e) => setOkFlags(e.target.checked)} className="mt-0.5 accent-[var(--flesh)]" />
             I read the flags and still want to put money into this pool.
           </label>
@@ -286,7 +286,7 @@ export function EarnDeposit({ pair, token, symbol, base, apr }: { pair: string; 
         {busy ?? (!me ? "Connect a wallet to deposit" : `Deposit ${amt || 0} ${pay}`)}
       </button>
       {pos && pos.lp > 0n && (
-        <div className="rounded-xl border border-leaf/30 bg-leaf/[0.05] p-3 text-[12.5px]">
+        <div className="rounded-xl border border-leaf/30 bg-leaf/[0.05] p-3 text-[13px]">
           <p className="flex justify-between">
             <span className="text-muted">Your position</span>
             <span className="font-mono text-text">{`${(pos.share * 100).toFixed(4)}% of the pool`}</span>
@@ -295,13 +295,13 @@ export function EarnDeposit({ pair, token, symbol, base, apr }: { pair: string; 
             <span className="text-muted">{`Your ${pay === "ETH" ? "WETH" : "USDG"} side`}</span>
             <span className="font-mono text-text">{pos.baseSide.toLocaleString("en", { maximumFractionDigits: dec === 6 ? 2 : 6 })}</span>
           </p>
-          <button type="button" disabled={!!busy} onClick={() => void withdraw()} className="mt-2 h-9 w-full rounded-lg border border-line text-[12.5px] text-text hover:border-flesh disabled:opacity-60">
+          <button type="button" disabled={!!busy} onClick={() => void withdraw()} className="mt-2 h-9 w-full rounded-lg border border-line text-[13px] text-text hover:border-flesh disabled:opacity-60">
             Withdraw all
           </button>
         </div>
       )}
       {msg && (
-        <p className={cx("text-[12px]", msg.ok ? "text-leaf" : "text-flesh")}>
+        <p className={cx("text-[13px]", msg.ok ? "text-leaf" : "text-flesh")}>
           {msg.text}{" "}
           {msg.tx && (
             <a href={EXPLORER + msg.tx} target="_blank" rel="noreferrer" className="font-mono underline">
@@ -310,7 +310,7 @@ export function EarnDeposit({ pair, token, symbol, base, apr }: { pair: string; 
           )}
         </p>
       )}
-      <p className="text-[12px] leading-relaxed text-[#7d8a83]">Half is swapped for {symbol}, then both go into the pool from your wallet through the Uniswap V2 router. Corbel holds nothing and takes no fee. A price move can take back more than the fees; a pool can be drained. Check the token first.</p>
+      <p className="text-[13px] leading-relaxed text-[#7d8a83]">Half is swapped for {symbol}, then both go into the pool from your wallet through the Uniswap V2 router. Corbel holds nothing and takes no fee. A price move can take back more than the fees; a pool can be drained. Check the token first.</p>
     </div>
   );
 }

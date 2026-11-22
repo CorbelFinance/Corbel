@@ -59,7 +59,7 @@ function Rivals({ m, rows }: { m: Model; rows: Model[] }) {
                   <span className={cx("truncate", e.id === m.id ? "font-semibold text-text" : "text-[#e9d6c8]")}>{e.name}</span>
                   {e.id === m.id && <span className="rounded-full border border-[#ff9a5c]/50 px-1.5 text-[12px] text-[#ff9a5c]">this one</span>}
                   {e.id === low?.id && <span className="rounded-full bg-[#6fe7a8]/15 px-2 text-[12px] text-[#6fe7a8]">cheapest</span>}
-                  <span className="ml-auto shrink-0 font-mono text-[12px] text-muted">{`${money(e.pin)} / ${money(e.pout)}`}</span>
+                  <span className="ml-auto shrink-0 font-mono text-[12px] text-muted">{e.pin || e.pout ? `${money(e.pin)} / ${money(e.pout)}` : "Price at launch"}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="h-2 flex-1 overflow-hidden rounded-full bg-[#1c130e]">
@@ -166,7 +166,7 @@ export function Models() {
                 <span className="block truncate text-[12px] text-muted">{`${makerName(m.maker)} · ${m.in.join(", ")} → ${m.out.join(", ")}`}</span>
               </span>
               <span className="hidden text-right tabular-nums text-[12px] text-muted sm:block">{m.media ? "" : ctxK(m.ctx)}</span>
-              <span className="text-right tabular-nums text-[13px] text-[#ffcfae]">{m.media ? "Price at launch" : m.pimg ? `${money(m.pimg)} / img` : `${money(m.pin)} / ${money(m.pout)}`}</span>
+              <span className="text-right tabular-nums text-[13px] text-[#ffcfae]">{m.media ? "Price at launch" : m.pimg ? `${money(m.pimg)} / img` : m.pin || m.pout ? `${money(m.pin)} / ${money(m.pout)}` : "Price at launch"}</span>
               <span className="hidden text-right text-[12px] text-muted sm:block">{m.created ? ago(m.created) : ""}</span>
               <span className={cx("hidden text-[#ff9a5c] transition-transform sm:block", open === m.id && "rotate-90")}>›</span>
             </button>

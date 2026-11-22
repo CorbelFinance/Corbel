@@ -71,8 +71,8 @@ function Payoff({ f, at }: { f: number; at: number }) {
       <line x1={X(1)} x2={X(1)} y1={P} y2={H - P} stroke="var(--line)" strokeDasharray="3 3" />
       <path d={line} fill="none" stroke="var(--text)" strokeWidth={1.5} />
       {at >= MOVES[0]! && at <= MOVES[MOVES.length - 1]! && <circle cx={X(at)} cy={Y(cur)} r={4} fill={cur >= 0 ? "var(--leaf)" : "var(--flesh)"} />}
-      <text x={X(1) + 4} y={H - P - 2} className="fill-[var(--muted)] font-mono text-[12px]">no move</text>
-      <text x={P} y={Y(0) - 4} className="fill-[var(--muted)] font-mono text-[12px]">holding</text>
+      <text x={X(1) + 4} y={H - P - 2} className="fill-[var(--muted)] font-mono text-[13px]">no move</text>
+      <text x={P} y={Y(0) - 4} className="fill-[var(--muted)] font-mono text-[13px]">holding</text>
     </svg>
   );
 }
@@ -193,7 +193,7 @@ export function EarnPools() {
                     ["deep", "Deepest"],
                   ] as const
                 ).map(([id, label]) => (
-                  <button key={id} type="button" aria-pressed={sort === id} onClick={() => (setSort(id), setPick(0))} className={cx("rounded-full border px-3 py-1 font-medium text-[12px] uppercase tracking-[0.08em]", sort === id ? "border-leaf bg-leaf/10 text-leaf" : "border-line text-muted hover:text-text")}>
+                  <button key={id} type="button" aria-pressed={sort === id} onClick={() => (setSort(id), setPick(0))} className={cx("rounded-full border px-3 py-1 font-medium text-[13px] uppercase tracking-[0.08em]", sort === id ? "border-leaf bg-leaf/10 text-leaf" : "border-line text-muted hover:text-text")}>
                     {label}
                   </button>
                 ))}
@@ -211,7 +211,7 @@ export function EarnPools() {
       >
         {rows && (
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
-            <div className="flex rounded-full bg-[#181818] p-[3px] text-[12px]">
+            <div className="flex rounded-full bg-[#181818] p-[3px] text-[13px]">
               {(
                 [
                   ["all", "All"],
@@ -224,8 +224,8 @@ export function EarnPools() {
                 </button>
               ))}
             </div>
-            <input value={q} onChange={(e) => (setQ(e.target.value), setPick(0))} placeholder="Find a pool" aria-label="Find a pool" className="h-8 w-44 rounded-full border border-[#242424] bg-[#101010] px-3 text-[12px] text-text outline-none focus:border-ui/60" />
-            <span className="ml-auto text-[12px] text-muted">{sorted?.length ?? 0} pools</span>
+            <input value={q} onChange={(e) => (setQ(e.target.value), setPick(0))} placeholder="Find a pool" aria-label="Find a pool" className="h-8 w-44 rounded-full border border-[#242424] bg-[#101010] px-3 text-[13px] text-text outline-none focus:border-ui/60" />
+            <span className="ml-auto text-[13px] text-muted">{sorted?.length ?? 0} pools</span>
           </div>
         )}
         {state === "error" && <p className="bg-flesh-deep/50 px-4 py-3 text-sm text-text">{msg}</p>}
@@ -237,7 +237,7 @@ export function EarnPools() {
               <thead>
                 <tr className="border-b border-line">
                   {["Pool", "Fee yield, yearly", "Fees − IL, window", "Volume by hour", "Paid hours", "Turnover", "Liquidity", "Volume", "LP fees"].map((h) => (
-                    <th key={h} scope="col" className="px-4 py-3 font-medium text-[12px] font-normal uppercase tracking-[0.08em] text-muted">
+                    <th key={h} scope="col" className="px-4 py-3 font-medium text-[13px] font-normal uppercase tracking-[0.08em] text-muted">
                       {h}
                       {(h === "Fee yield, yearly" || h === "Fees − IL, window") && <span title="Computed by Corbel from on-chain swaps" className="ml-1.5 text-[var(--lav)]">·calc</span>}
                     </th>
@@ -254,38 +254,38 @@ export function EarnPools() {
                         <span className="block font-mono text-text">
                           {x.symbol} <span className="text-muted">/ {x.base}</span>
                         </span>
-                        <span className="block max-w-[14rem] truncate text-xs text-muted">{x.name || short(x.token)}</span>
+                        <span className="block max-w-[14rem] truncate text-[13px] text-muted">{x.name || short(x.token)}</span>
                         {(() => {
                           const v = verdict(x);
-                          return <span className={cx("mt-0.5 block text-[12.5px] font-medium", v.tone === "bad" ? "text-flesh" : v.tone === "good" ? "text-leaf" : "text-text")}>{v.k}</span>;
+                          return <span className={cx("mt-0.5 block text-[13px] font-medium", v.tone === "bad" ? "text-flesh" : v.tone === "good" ? "text-leaf" : "text-text")}>{v.k}</span>;
                         })()}
                         </span>
                       </button>
                     </th>
                     <td className={cx("px-4 py-3 font-display text-lg tabular-nums", x.apr && x.apr > 0 ? "text-leaf" : "text-muted")}>{pct(x.apr)}</td>
-                    <td className={cx("px-4 py-3 font-mono text-xs", x.net === null ? "text-muted" : x.net >= 0 ? "text-leaf" : "text-flesh")}>
+                    <td className={cx("px-4 py-3 font-mono text-[13px]", x.net === null ? "text-muted" : x.net >= 0 ? "text-leaf" : "text-flesh")}>
                       {x.net === null ? "—" : `${x.net >= 0 ? "+" : ""}${(x.net * 100).toFixed(2)}%`}
-                      {x.move !== null && <span className="block text-[12px] text-muted">{`price ${x.move >= 0 ? "+" : ""}${(x.move * 100).toFixed(1)}%`}</span>}
+                      {x.move !== null && <span className="block text-[13px] text-muted">{`price ${x.move >= 0 ? "+" : ""}${(x.move * 100).toFixed(1)}%`}</span>}
                     </td>
                     <td className="px-4 py-3">
                       <Spark v={x.hourly} />
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs">
+                    <td className="px-4 py-3 font-mono text-[13px]">
                       <span className={x.hourly.filter((h) => h > 0).length >= 18 ? "text-leaf" : x.hourly.filter((h) => h > 0).length >= 8 ? "text-text" : "text-flesh"}>{x.hourly.filter((h) => h > 0).length}</span>
                       <span className="text-muted"> / 24</span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-text">{x.liquidity > 0 ? `${(x.volume / x.liquidity).toFixed(2)}×` : "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-text">{usd(x.liquidity)}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-text">
+                    <td className="px-4 py-3 font-mono text-[13px] text-text">{x.liquidity > 0 ? `${(x.volume / x.liquidity).toFixed(2)}×` : "—"}</td>
+                    <td className="px-4 py-3 font-mono text-[13px] text-text">{usd(x.liquidity)}</td>
+                    <td className="px-4 py-3 font-mono text-[13px] text-text">
                       {usd(x.volume)}
-                      <span className="block text-[12px] text-muted">{x.swaps} swaps · {Math.round(x.hours)}h</span>
+                      <span className="block text-[13px] text-muted">{x.swaps} swaps · {Math.round(x.hours)}h</span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-leaf">{usd(x.fees)}</td>
+                    <td className="px-4 py-3 font-mono text-[13px] text-leaf">{usd(x.fees)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {hidden > 0 && <p className="border-t border-line px-4 py-2.5 font-medium text-[12px] uppercase tracking-[0.08em] text-muted">{hidden} more pools read, each under {usd(MIN_SHOWN)} of liquidity: a yearly rate there means nothing</p>}
+            {hidden > 0 && <p className="border-t border-line px-4 py-2.5 font-medium text-[13px] uppercase tracking-[0.08em] text-muted">{hidden} more pools read, each under {usd(MIN_SHOWN)} of liquidity: a yearly rate there means nothing</p>}
           </div>
         )}
       </Instrument>
@@ -303,39 +303,39 @@ export function EarnPools() {
                 <p className="font-mono text-sm text-text">
                   {r.symbol} / {r.base}
                 </p>
-                <span className="ml-auto font-mono text-[12px] text-muted">{pct(r.apr)} yearly</span>
+                <span className="ml-auto font-mono text-[13px] text-muted">{pct(r.apr)} yearly</span>
               </div>
               <div>
-                <label htmlFor="ep-amt" className="block text-[12px] text-muted">
+                <label htmlFor="ep-amt" className="block text-[13px] text-muted">
                   You deposit, in USD, half in each token
                 </label>
                 <div className="ifield mt-1 h-11">
                   <input id="ep-amt" value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" autoComplete="off" className="px-3 font-display text-xl text-text" />
-                  <span className="flex items-center px-3 font-mono text-xs text-muted">USD</span>
+                  <span className="flex items-center px-3 font-mono text-[13px] text-muted">USD</span>
                 </div>
                 <div className="mt-1.5 grid grid-cols-4 gap-1">
                   {["100", "500", "1000", "5000"].map((v) => (
-                    <button key={v} type="button" onClick={() => setAmt(v)} className="h-7 rounded-md border border-line font-mono text-[12px] text-text hover:border-ui/60 hover:text-leaf">
+                    <button key={v} type="button" onClick={() => setAmt(v)} className="h-7 rounded-md border border-line font-mono text-[13px] text-text hover:border-ui/60 hover:text-leaf">
                       {usd(Number(v))}
                     </button>
                   ))}
                 </div>
               </div>
               <label className="block">
-                <span className="flex justify-between text-[12px] text-muted">
+                <span className="flex justify-between text-[13px] text-muted">
                   <span>Hold for</span>
                   <span className="font-mono text-text">{days} days</span>
                 </span>
                 <input type="range" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-full accent-[var(--ui)]" />
               </label>
               <label className="block">
-                <span className="flex justify-between text-[12px] text-muted">
+                <span className="flex justify-between text-[13px] text-muted">
                   <span>{r.symbol} price by then</span>
                   <span className={cx("font-mono", move >= 1 ? "text-leaf" : "text-flesh")}>{`${move >= 1 ? "+" : ""}${Math.round((move - 1) * 100)}%`}</span>
                 </span>
                 <input type="range" min={0.2} max={3} step={0.05} value={move} onChange={(e) => setMove(Number(e.target.value))} className="w-full accent-[var(--ui)]" />
               </label>
-              <div className="flex rounded-lg bg-[#181818] p-[3px] text-[12px]">
+              <div className="flex rounded-lg bg-[#181818] p-[3px] text-[13px]">
                 {SCEN.map((x) => (
                   <button key={x.id} type="button" onClick={() => setScen(x.id)} className={cx("flex-1 rounded-md px-2 py-1", scen === x.id ? "bg-[#282828] text-text" : "text-muted hover:text-text")}>
                     {x.label}
@@ -346,16 +346,16 @@ export function EarnPools() {
                 <>
                   {/* the answer first: better or worse than just holding the two tokens */}
                   <div className={cx("rounded-xl border px-4 py-4", sim.net >= 0 ? "border-leaf/40 bg-leaf/[0.07]" : "border-flesh/40 bg-flesh/[0.07]")}>
-                    <p className="text-[13px] text-text">Against simply holding</p>
+                    <p className="text-[14px] text-text">Against simply holding</p>
                     <p className={cx("mt-1 font-display text-[44px] leading-none tabular-nums", sim.net >= 0 ? "text-leaf" : "text-flesh")}>{`${sim.net >= 0 ? "+" : "−"}${usd(Math.abs(sim.net))}`}</p>
-                    <p className="mt-2 text-[13px] text-muted">
+                    <p className="mt-2 text-[14px] text-muted">
                       {sim.band
                         ? Number.isFinite(sim.band[1])
                           ? `Fees beat the price move while ${r.symbol} stays between ${Math.round((sim.band[0] - 1) * 100)}% and +${Math.round((sim.band[1] - 1) * 100)}%.`
                           : "Fees cover any price move over this time."
                         : "No fees in this scenario: any move is a loss."}
                     </p>
-                    <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line/60 pt-2 font-mono text-[13px]">
+                    <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line/60 pt-2 font-mono text-[14px]">
                       <span>
                         <span className="text-muted">fees</span> <span className="text-leaf">{`+${usd(sim.fees)}`}</span>
                       </span>
@@ -365,27 +365,27 @@ export function EarnPools() {
                       <span className="text-muted">{`${usd(sim.perDay)} a day · ${pct(sim.share)} of the pool`}</span>
                     </p>
                   </div>
-                  <p className="rounded-lg border border-[#e3b341]/30 bg-[#e3b341]/[0.05] px-3 py-2 text-[13px] text-text">
+                  <p className="rounded-lg border border-[#e3b341]/30 bg-[#e3b341]/[0.05] px-3 py-2 text-[14px] text-text">
                     <span className="text-[#e3b341]">Past, not promised.</span> Fees come from the volume you set above; a pool can be drained.
                   </p>
                   <Payoff f={sim.f} at={move} />
                 </>
               )}
               <div className="flex flex-wrap gap-3">
-                <Link href={`/app/trade/terminal?token=${r.token}`} className="font-medium text-[12px] uppercase tracking-[0.08em] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
+                <Link href={`/app/trade/terminal?token=${r.token}`} className="font-medium text-[13px] uppercase tracking-[0.08em] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
                   Chart →
                 </Link>
-                <Link href={`/app/trade/check?q=${r.token}`} className="font-medium text-[12px] uppercase tracking-[0.08em] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
+                <Link href={`/app/trade/check?q=${r.token}`} className="font-medium text-[13px] uppercase tracking-[0.08em] text-ui underline decoration-ui/30 underline-offset-4 hover:decoration-ui">
                   Check →
                 </Link>
-                <a href={`https://robinhoodchain.blockscout.com/address/${r.pair}`} target="_blank" rel="noreferrer" className="font-medium text-[12px] uppercase tracking-[0.08em] text-muted hover:text-text">
+                <a href={`https://robinhoodchain.blockscout.com/address/${r.pair}`} target="_blank" rel="noreferrer" className="font-medium text-[13px] uppercase tracking-[0.08em] text-muted hover:text-text">
                   Pool ↗
                 </a>
               </div>
             </div>
           )}
         </Instrument>
-        {r && r.price !== null && <p className="px-1 text-[12px] text-muted">{r.symbol} now ${fmtPx(r.price)} in this pool.</p>}
+        {r && r.price !== null && <p className="px-1 text-[13px] text-muted">{r.symbol} now ${fmtPx(r.price)} in this pool.</p>}
       </div>
     </div>
     </div>

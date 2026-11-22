@@ -99,7 +99,7 @@ function Card({ title, aside, children, className }: { title: string; aside?: Re
     <section className={cx("rounded-2xl border border-[#242424] bg-[#131313] p-5", className)}>
       <header className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[16px] font-semibold text-text">{title}</h2>
-        {aside && <span className="text-[12px] text-muted">{aside}</span>}
+        {aside && <span className="text-[13px] text-muted">{aside}</span>}
       </header>
       {children}
     </section>
@@ -191,7 +191,7 @@ export function StockMarket() {
       <p className="mt-2 font-mono text-2xl text-text">
         {usd(s.volume)} {s.change !== null && <span className={cx("text-[14px]", s.change >= 0 ? "text-leaf" : "text-flesh")}>{pct(s.change, 2)}</span>}
       </p>
-      <dl className="mt-3 space-y-1 text-[13px]">
+      <dl className="mt-3 space-y-1 text-[14px]">
         {(
           [
             ["Price", s.price !== null ? `$${fmtPx(s.price)}` : "—"],
@@ -207,7 +207,7 @@ export function StockMarket() {
           </div>
         ))}
       </dl>
-      <p className="mt-3 border-t border-[#242424] pt-2 text-[12px] text-muted">Click to open the chart</p>
+      <p className="mt-3 border-t border-[#242424] pt-2 text-[13px] text-muted">Click to open the chart</p>
     </>
   );
 
@@ -253,7 +253,7 @@ export function StockMarket() {
               <span>area = {mapBy === "volume" ? "24h volume" : "liquidity"} · tint = 24h move</span>
               <span className="flex rounded-full bg-[#181818] p-[3px]">
                 {(["volume", "liquidity"] as const).map((m) => (
-                  <button key={m} type="button" aria-pressed={mapBy === m} onClick={() => setMapBy(m)} className={cx("rounded-full px-3 py-1 text-[12px] capitalize", mapBy === m ? "bg-[#282828] text-text" : "text-muted")}>
+                  <button key={m} type="button" aria-pressed={mapBy === m} onClick={() => setMapBy(m)} className={cx("rounded-full px-3 py-1 text-[13px] capitalize", mapBy === m ? "bg-[#282828] text-text" : "text-muted")}>
                     {m}
                   </button>
                 ))}
@@ -276,16 +276,16 @@ export function StockMarket() {
                 >
                   {!small && (
                     <>
-                      <span className="flex items-center gap-1.5 font-mono text-[12px] font-semibold" style={{ color: c.fg }}>
+                      <span className="flex items-center gap-1.5 font-mono text-[13px] font-semibold" style={{ color: c.fg }}>
                         {r.w > 14 && r.h > 14 && <TokenAvatar address={s.token} symbol={s.symbol} stock size={16} />}
                         {s.symbol}
                       </span>
                       {r.h > 14 && (
-                        <span className="mt-0.5 block font-mono text-[12px]" style={{ color: c.fg }}>
+                        <span className="mt-0.5 block font-mono text-[13px]" style={{ color: c.fg }}>
                           {s.change !== null ? pct(s.change, 2) : "—"}
                         </span>
                       )}
-                      {r.h > 20 && r.w > 14 && <span className="block font-mono text-[12px]" style={{ color: c.fg }}>{usd(mapBy === "volume" ? s.volume : s.liquidity)}</span>}
+                      {r.h > 20 && r.w > 14 && <span className="block font-mono text-[13px]" style={{ color: c.fg }}>{usd(mapBy === "volume" ? s.volume : s.liquidity)}</span>}
                     </>
                   )}
                 </Link>
@@ -297,12 +297,12 @@ export function StockMarket() {
                 className="absolute flex flex-col justify-end border border-[#0d0d0d] bg-[#181818] p-2 hover:brightness-125"
                 style={{ left: `${map.tail.r.x}%`, top: `${map.tail.r.y}%`, width: `${map.tail.r.w}%`, height: `${map.tail.r.h}%` }}
               >
-                <span className="font-mono text-[12px] text-text">{`+${map.tail.n} more`}</span>
-                {map.tail.r.h > 10 && <span className="font-mono text-[12px] text-muted">{usd(map.tail.v)}</span>}
+                <span className="font-mono text-[13px] text-text">{`+${map.tail.n} more`}</span>
+                {map.tail.r.h > 10 && <span className="font-mono text-[13px] text-muted">{usd(map.tail.v)}</span>}
               </Link>
             )}
           </div>
-          <div className="mt-3 flex items-center gap-3 text-[12px] text-muted">
+          <div className="mt-3 flex items-center gap-3 text-[13px] text-muted">
             <span>{pct(-SPAN, 0)}</span>
             <span className="h-1.5 w-40 rounded-full bg-gradient-to-r from-[rgba(255,69,96,0.6)] via-[rgba(141,156,145,0.15)] to-[rgba(111,231,168,0.6)]" />
             <span>{pct(SPAN, 0)}</span>
@@ -320,8 +320,8 @@ export function StockMarket() {
               ] as const
             ).map(([k, u, f, lu, ld]) => (
               <div key={k} className="mb-2 grid grid-cols-[4.5rem_1fr] items-center gap-3">
-                <span className="text-[12px] text-muted">{k}</span>
-                <div className="flex h-6 overflow-hidden rounded-md bg-[#181818] font-mono text-[12px]">
+                <span className="text-[13px] text-muted">{k}</span>
+                <div className="flex h-6 overflow-hidden rounded-md bg-[#181818] font-mono text-[13px]">
                   <span className="flex items-center justify-center bg-ui/70 text-[#0b0b0b] transition-[width] duration-1000" style={{ width: grown ? `${u * 100}%` : "0%" }}>
                     {u > 0.08 && lu}
                   </span>
@@ -338,15 +338,15 @@ export function StockMarket() {
                 ] as const
               ).map(([k, list]) => (
                 <div key={k}>
-                  <p className="mb-2 text-[12px] uppercase tracking-[0.12em] text-muted">{k}</p>
+                  <p className="mb-2 text-[13px] uppercase tracking-[0.12em] text-muted">{k}</p>
                   <ul className="space-y-1.5">
                     {list.map((s) => (
                       <li key={s.token}>
-                        <Link href={`/app/trade/terminal?token=${s.token}`} onMouseMove={(e) => show(e, tipBody(s))} className="flex items-center gap-2 text-[13px] hover:text-leaf">
+                        <Link href={`/app/trade/terminal?token=${s.token}`} onMouseMove={(e) => show(e, tipBody(s))} className="flex items-center gap-2 text-[14px] hover:text-leaf">
                           <TokenAvatar address={s.token} symbol={s.symbol} stock size={18} />
                           <span className="w-14 truncate font-mono text-text">{s.symbol}</span>
                           <span className={cx("font-mono", s.change! >= 0 ? "text-leaf" : "text-flesh")}>{pct(s.change!)}</span>
-                          <span className="ml-auto font-mono text-[12px] text-muted">{usd(s.volume)}</span>
+                          <span className="ml-auto font-mono text-[13px] text-muted">{usd(s.volume)}</span>
                         </Link>
                       </li>
                     ))}
@@ -368,8 +368,8 @@ export function StockMarket() {
               return (
                 <div key={k} className="mb-4 last:mb-0">
                   <div className="flex items-baseline justify-between">
-                    <p className="text-[12px] uppercase tracking-[0.12em] text-muted">{k}</p>
-                    <p className="flex gap-4 font-mono text-[12px]">
+                    <p className="text-[13px] uppercase tracking-[0.12em] text-muted">{k}</p>
+                    <p className="flex gap-4 font-mono text-[13px]">
                       {cuts.map((c, i) => (
                         <span key={i}>
                           <span className="text-text">{share(c)}</span> <span className="text-muted">{labels[i]}</span>
@@ -395,9 +395,9 @@ export function StockMarket() {
           <ul className="space-y-3">
             {d.venues.slice(0, 12).map((v, i) => (
               <li key={v.id} onMouseMove={(e) => show(e, <VenueTip v={v} total={t} />)} className="grid grid-cols-[7rem_1fr_4.5rem] items-center gap-3 sm:grid-cols-[9rem_1fr_5rem]">
-                <span className="truncate text-[13px] text-text">
+                <span className="truncate text-[14px] text-text">
                   {v.id}
-                  <span className="block text-[12px] text-muted">
+                  <span className="block text-[13px] text-muted">
                     {v.pools} pools · {v.stocks} stocks
                   </span>
                 </span>
@@ -405,14 +405,14 @@ export function StockMarket() {
                   <span className="block h-2 rounded-full bg-leaf/80 transition-[width] duration-1000" style={{ width: grown ? `${(v.volume / maxVenue) * 100}%` : "0%", transitionDelay: `${i * 50}ms` }} />
                   <span className="block h-1 rounded-full bg-[var(--lav)]/70 transition-[width] duration-1000" style={{ width: grown ? `${(v.liquidity / maxVenue) * 100}%` : "0%", transitionDelay: `${i * 50 + 80}ms` }} />
                 </span>
-                <span className="text-right tabular-nums text-[12px] text-text">
+                <span className="text-right tabular-nums text-[13px] text-text">
                   {usd(v.volume)}
-                  <span className="block text-[12px] text-muted">{usd(v.liquidity)}</span>
+                  <span className="block text-[13px] text-muted">{usd(v.liquidity)}</span>
                 </span>
               </li>
             ))}
           </ul>
-          <p className="mt-4 flex gap-4 text-[12px] text-muted">
+          <p className="mt-4 flex gap-4 text-[13px] text-muted">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-4 rounded-full bg-leaf/80" /> 24h volume
             </span>
@@ -425,9 +425,9 @@ export function StockMarket() {
         {/* pools */}
         <Card title="Pools" aside="price against the stock's deepest pool">
           <div tabIndex={0} role="region" aria-label="Pools, scrollable" className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-left text-[13px]">
+            <table className="w-full min-w-[640px] border-collapse text-left text-[14px]">
               <thead>
-                <tr className="border-b border-[#242424] text-[12px] text-muted">
+                <tr className="border-b border-[#242424] text-[13px] text-muted">
                   {["Pool", "24h volume", "Liquidity", "Turnover", "Vs headline", "Trades"].map((h) => (
                     <th key={h} scope="col" className={cx("py-2 font-normal", h !== "Pool" && "text-right")}>
                       {h}
@@ -442,7 +442,7 @@ export function StockMarket() {
                       <span className="font-mono text-text">
                         {p.symbol}/{p.quote}
                       </span>
-                      <span className="block text-[12px] text-muted">{p.venue}</span>
+                      <span className="block text-[13px] text-muted">{p.venue}</span>
                     </td>
                     <td className="py-2.5 text-right tabular-nums text-text">{usd(p.volume)}</td>
                     <td className="py-2.5 text-right tabular-nums text-muted">{usd(p.liquidity)}</td>
@@ -455,7 +455,7 @@ export function StockMarket() {
             </table>
           </div>
           {d.pools.length > 10 && (
-            <button type="button" onClick={() => setAllPools((v) => !v)} className="mt-3 rounded-lg border border-[#242424] bg-[#181818] px-3 py-1.5 text-[12px] text-text hover:border-ui/60">
+            <button type="button" onClick={() => setAllPools((v) => !v)} className="mt-3 rounded-lg border border-[#242424] bg-[#181818] px-3 py-1.5 text-[13px] text-text hover:border-ui/60">
               {allPools ? "Show top 10" : `Show all ${d.pools.length}`}
             </button>
           )}
@@ -466,7 +466,7 @@ export function StockMarket() {
 
       <TurnoverMap stocks={d.stocks.filter((s) => s.volume > 0 && s.liquidity > 0)} grown={grown} onHover={(e, s) => show(e, tipBody(s))} />
 
-      <p className="text-[12px] text-muted">
+      <p className="text-[13px] text-muted">
         Pools on every venue on Robinhood Chain; stock tokens from Corbel&apos;s index and issuer-code check. Read {new Date(d.at).toISOString().slice(11, 16)} UTC, refreshed every five minutes.
       </p>
 
@@ -484,7 +484,7 @@ function VenueTip({ v, total }: { v: MVenue; total: Snap["totals"] }) {
     <>
       <p className="text-[14px] font-semibold text-text">{v.id}</p>
       <p className="mt-1 font-mono text-2xl text-text">{usd(v.volume)}</p>
-      <dl className="mt-3 space-y-1 text-[13px]">
+      <dl className="mt-3 space-y-1 text-[14px]">
         {(
           [
             ["Liquidity", usd(v.liquidity)],

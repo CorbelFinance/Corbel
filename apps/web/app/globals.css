@@ -1617,7 +1617,7 @@ html {
   text-transform: none;
 }
 .app-skin .inst-title { font-size: 15px; font-weight: 600; }
-.app-skin .inst-foot { font-size: 12px; }
+.app-skin .inst-foot { font-size: 13px; }
 
 /* small mono caps labels become sans sentence-case labels; numbers stay mono */
 .app-skin .font-mono.uppercase {
@@ -2894,3 +2894,6 @@ html .divide-\[\#16201b\]:not(.ai-zone *) > :not(:last-child) { border-color: #1
     contain-intrinsic-size: auto 2200px;
   }
 }
+
+/* long unbroken strings (addresses, function signatures, URLs) wrap instead of widening the page on phones */
+.docs-prose { overflow-wrap: anywhere; }

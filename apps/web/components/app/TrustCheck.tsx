@@ -149,7 +149,9 @@ export function TrustCheck() {
   const by = (id: string) => report?.checks.find((c) => c.id === id);
   // holders take up to a minute on a busy token: the score starts without them and takes them in when they land
   const { d: hd } = useHolders(report && !(report as { holders?: HoldersIn | null }).holders ? report.token : null);
-  const sc = report ? score(report.checks as ScoreCheck[], (report as { holders?: HoldersIn | null }).holders ?? briefOf(hd as Parameters<typeof briefOf>[0]), (report as { market?: MarketIn | null }).market) : null;
+  // an address with no token code (the zero address, a wallet, a plain contract) gets no score and no "can be sold"
+  const notToken = !!report && report.checks.some((c) => /^Not a token contract|^No contract at this address|^No symbol\(\) on this contract/.test(c.reason));
+  const sc = report && !notToken ? score(report.checks as ScoreCheck[], (report as { holders?: HoldersIn | null }).holders ?? briefOf(hd as Parameters<typeof briefOf>[0]), (report as { market?: MarketIn | null }).market) : null;
   const tone = (n: number) => (n >= 80 ? "text-leaf" : n >= 60 ? "text-text" : n >= 40 ? "text-[var(--lav)]" : "text-flesh");
 
   return (
@@ -248,8 +250,9 @@ export function TrustCheck() {
               const warns = report.checks.filter((c) => c.result === "warn" || c.result === "unknown").length;
               const tick = by("ticker");
               const hp = by("honeypot");
-              const sentence =
-                tick?.result === "fail" && /lookalike/i.test(tick.reason)
+              const sentence = notToken
+                ? `${short(report.token)} is not a token: no token code lives at this address. There is nothing to buy or sell here.`
+                : tick?.result === "fail" && /lookalike/i.test(tick.reason)
                   ? `This is not the real ${sym}. It copies the name; the issuer's code is not here.`
                   : tick?.result === "fail" && /you asked for/i.test(tick.reason)
                     ? `${tick.reason} Check the address before anything else.`
@@ -265,9 +268,9 @@ export function TrustCheck() {
               return (
                 <Verdict
                   kicker={report.example ? "Example report · can you sell it" : `${sym} · ${short(report.token)} · can you sell it`}
-                  tone={exit?.result === "fail" || fails ? "bad" : warns ? "caution" : "good"}
-                  value={sc ? sc.total : `${passed}/${report.checks.length}`}
-                  valueLabel={sc ? `Corbel score of 90 · ${sc.tag}` : "checks passed"}
+                  tone={notToken || exit?.result === "fail" || fails ? "bad" : warns ? "caution" : "good"}
+                  value={notToken ? "Not a token" : sc ? <>{sc.total}<span className="text-[0.45em] text-muted">/90</span></> : `${passed}/${report.checks.length}`}
+                  valueLabel={notToken ? "no score: nothing here can be traded" : sc ? `Corbel score, ${sc.total} of a possible 90 · ${sc.tag}` : "checks passed"}
                   facts={[
                     ["Checks passed", `${passed} of ${report.checks.length}`],
                     ["Exit now", by("exit")?.metric ?? "—"],
@@ -313,7 +316,7 @@ export function TrustCheck() {
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
               <div className="overflow-hidden rounded-2xl border border-[#242424] bg-[#131313]">
                 <div className="flex items-center justify-between border-b border-[#242424] px-4 py-3">
-                  <span className="text-[15px] font-semibold text-text">Seven checks</span>
+                  <span className="text-[15px] font-semibold text-text">{report.checks.length === 7 ? "Seven checks" : `${report.checks.length} checks`}</span>
                   {report.meta && (
                     <span className="font-mono text-[12px] text-muted">
                       {report.meta.venue ?? "no pool"} · block {Number(report.meta.block).toLocaleString("en-US")} · {(report.meta.ms / 1000).toFixed(1)} s

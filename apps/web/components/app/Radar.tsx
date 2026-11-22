@@ -124,7 +124,7 @@ export function Radar() {
       status={
         <>
           <Seg label="Pool type" value={kind} options={FILTERS} onChange={setKind} />
-          <label className="flex cursor-pointer items-center gap-2 font-medium text-[12px] uppercase tracking-[0.08em] text-muted">
+          <label className="flex cursor-pointer items-center gap-2 font-medium text-[13px] uppercase tracking-[0.08em] text-muted">
             <input type="checkbox" checked={hideDead} onChange={(e) => setHideDead(e.target.checked)} className="accent-[var(--ui)]" />
             Hide drained
           </label>
@@ -140,7 +140,7 @@ export function Radar() {
         </>
       }
     >
-      <p className="flex flex-wrap gap-x-6 gap-y-1 border-b border-line px-4 py-2.5 text-[13.5px] tabular-nums">
+      <p className="flex flex-wrap gap-x-6 gap-y-1 border-b border-line px-4 py-2.5 text-[14px] tabular-nums">
         {(
           [
             ["Pools indexed", feed ? feed.pools.toLocaleString("en") : null],
@@ -157,11 +157,11 @@ export function Radar() {
       </p>
 
       <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2.5">
-        <label htmlFor="radar-find" className="font-medium text-[12px] uppercase tracking-[0.08em] text-muted">
+        <label htmlFor="radar-find" className="font-medium text-[13px] uppercase tracking-[0.08em] text-muted">
           Find
         </label>
-        <input id="radar-find" value={find} onChange={(e) => setFind(e.target.value)} placeholder="symbol, name, token or wallet" autoComplete="off" spellCheck={false} maxLength={64} className="h-8 min-w-0 flex-1 border border-line bg-transparent px-3 font-mono text-xs text-text placeholder:text-muted sm:max-w-sm" />
-        <span className="ml-auto font-medium text-[12px] uppercase tracking-[0.08em] text-muted">
+        <input id="radar-find" value={find} onChange={(e) => setFind(e.target.value)} placeholder="symbol, name, token or wallet" autoComplete="off" spellCheck={false} maxLength={64} className="h-8 min-w-0 flex-1 border border-line bg-transparent px-3 font-mono text-[13px] text-text placeholder:text-muted sm:max-w-sm" />
+        <span className="ml-auto font-medium text-[13px] uppercase tracking-[0.08em] text-muted">
           {needle ? `${rows.length} of ${all.length} loaded` : `${all.length} loaded`}
         </span>
       </div>
@@ -174,7 +174,7 @@ export function Radar() {
           <thead>
             <tr className="sticky top-0 z-10 border-b border-line bg-[color-mix(in_srgb,var(--surface)_96%,var(--bg))]">
               {["Age", "Token", "Pool", "Signal", ""].map((h, i) => (
-                <th key={i} scope="col" className="px-4 py-3 font-medium text-[12px] font-normal uppercase tracking-[0.08em] text-muted">
+                <th key={i} scope="col" className="px-4 py-3 font-medium text-[13px] font-normal uppercase tracking-[0.08em] text-muted">
                   {h || <span className="sr-only">Action</span>}
                 </th>
               ))}
@@ -183,21 +183,21 @@ export function Radar() {
           <tbody>
             {!feed && !error && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center font-medium text-xs uppercase tracking-[0.08em] text-muted">
+                <td colSpan={5} className="px-4 py-10 text-center font-medium text-[13px] uppercase tracking-[0.08em] text-muted">
                   Reading the index…
                 </td>
               </tr>
             )}
             {feed && rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center font-medium text-xs uppercase tracking-[0.08em] text-muted">
+                <td colSpan={5} className="px-4 py-10 text-center font-medium text-[13px] uppercase tracking-[0.08em] text-muted">
                   No pools in this view.
                 </td>
               </tr>
             )}
             {rows.map((r) => (
               <tr key={r.pool} className="irow border-b border-line last:border-0">
-                <td className="px-4 py-3 text-xs tabular-nums text-muted" title={`Block ${r.block}`}>
+                <td className="px-4 py-3 text-[13px] tabular-nums text-muted" title={`Block ${r.block}`}>
                   {age(feed?.head ?? null, r.block)}
                 </td>
                 <th scope="row" className="px-4 py-3 font-normal">
@@ -205,21 +205,21 @@ export function Radar() {
                   <TokenAvatar address={r.token} symbol={r.symbol} size={30} />
                   <span className="min-w-0">
                   <span className="block max-w-[14rem] truncate font-mono text-text">{r.symbol ?? "no symbol"}</span>
-                  <span className="block max-w-[14rem] truncate text-xs text-muted">
+                  <span className="block max-w-[14rem] truncate text-[13px] text-muted">
                     {r.name ? `${r.name} · ` : ""}
                     {short(r.token)}
                   </span>
                   </span>
                   </span>
                 </th>
-                <td className="px-4 py-3 font-mono text-xs text-muted">
+                <td className="px-4 py-3 font-mono text-[13px] text-muted">
                   {r.launchpad ? (
-                    <span className="mb-1 flex items-center gap-1.5 text-[12px] text-text">
+                    <span className="mb-1 flex items-center gap-1.5 text-[13px] text-text">
                       <i className="h-2 w-2 rounded-full" style={{ background: launchpadTone(r.launchpad) }} />
                       {launchpadName(r.launchpad)}
                     </span>
                   ) : (
-                    r.hooked && <span className="mb-1 block text-[12px] text-muted">Unlabelled hook</span>
+                    r.hooked && <span className="mb-1 block text-[13px] text-muted">Unlabelled hook</span>
                   )}
                   {r.kind === "v4" ? "v4" : "V2"} · {r.base ?? "other"}
                 </td>
@@ -229,8 +229,8 @@ export function Radar() {
                     const sig = signal(r);
                     return (
                       <span className="block max-w-[17rem]">
-                        <span className={cx("block text-[13px] font-medium", sig.tone === "bad" ? "text-flesh" : sig.tone === "good" ? "text-leaf" : "text-text")}>{sig.k}</span>
-                        <span className="block font-mono text-[12px] text-muted">
+                        <span className={cx("block text-[14px] font-medium", sig.tone === "bad" ? "text-flesh" : sig.tone === "good" ? "text-leaf" : "text-text")}>{sig.k}</span>
+                        <span className="block font-mono text-[13px] text-muted">
                           {r.launcher ? (
                             <Link href={`/app/portfolio?address=${r.launcher}`} className="hover:underline">{sig.v}</Link>
                           ) : (
@@ -243,7 +243,7 @@ export function Radar() {
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right">
                   <WatchButton kind="token" value={r.token} label={r.symbol ?? ""} className="mr-3" />
-                  <Link href={`/app/trade/terminal?token=${r.token}`} className="mr-3 font-medium text-[12px] uppercase tracking-[0.08em] text-muted hover:text-leaf">
+                  <Link href={`/app/trade/terminal?token=${r.token}`} className="mr-3 font-medium text-[13px] uppercase tracking-[0.08em] text-muted hover:text-leaf">
                     Chart
                   </Link>
                   <Link href={`/app/trust/check?q=${r.token}`} className="ibtn-ghost">

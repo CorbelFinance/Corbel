@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { FLAGS, LAYERS, TERMS_CAPTION, layerById, type LayerId } from "@corbel/config";
+import { FACTS, FLAGS, LAYERS, TERMS_CAPTION, factText, layerById, type FactKey, type LayerId } from "@corbel/config";
 import { Button, Fact, Label, Rich, Section, StatusChip, cx } from "@corbel/ui";
 import { XrayLaunch } from "@/components/sections/XrayLaunch";
 import { WeekArt } from "@/components/sections/LayerArt";
@@ -140,7 +140,8 @@ function Hero({ l, f }: { l: L; f: Form }) {
 }
 
 function Steps({ l, f }: { l: L; f: Form }) {
-  const s = l.steps;
+  // step lines carry {{fact}} placeholders like every other copy: fill them, never print the raw template
+  const s = l.steps.map(([n, line]) => [n, line.replace(/\{\{(\w+)\}\}/g, (_, k: string) => (k in FACTS ? factText(k as FactKey) : "—"))] as const);
   const title = (
     <div className="flex items-baseline justify-between gap-4">
       <h2 className="font-display text-4xl tracking-tight">How it works</h2>

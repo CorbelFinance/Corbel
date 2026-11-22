@@ -46,21 +46,21 @@ export function LaunchOutcomes() {
     >
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
         {(["week", "all"] as const).map((s) => (
-          <button key={s} type="button" aria-pressed={span === s} onClick={() => setSpan(s)} className={cx("rounded-full border px-3 py-1 font-mono text-[12px]", span === s ? "border-leaf/60 text-text" : "border-line text-muted hover:text-text")}>
+          <button key={s} type="button" aria-pressed={span === s} onClick={() => setSpan(s)} className={cx("rounded-full border px-3 py-1 font-mono text-[13px]", span === s ? "border-leaf/60 text-text" : "border-line text-muted hover:text-text")}>
             {s === "week" ? "Last 7 days" : "All time"}
           </button>
         ))}
         <span className="ml-auto flex flex-wrap gap-3">
           {PARTS.map((p) => (
-            <span key={p.k} className="flex items-center gap-1.5 font-mono text-[11.5px] text-muted">
+            <span key={p.k} className="flex items-center gap-1.5 font-mono text-[13px] text-muted">
               <span aria-hidden className={cx("h-2 w-2", p.color)} />
               {p.label}
             </span>
           ))}
         </span>
       </div>
-      {!d && !err && <p className="caret px-4 py-6 font-mono text-xs text-muted">Reading launches</p>}
-      {err && <p className="px-4 py-6 font-mono text-xs text-muted">The index is not answering right now.</p>}
+      {!d && !err && <p className="caret px-4 py-6 font-mono text-[13px] text-muted">Reading launches</p>}
+      {err && <p className="px-4 py-6 font-mono text-[13px] text-muted">The index is not answering right now.</p>}
       {view && (
         <ul className="divide-y divide-line">
           {rows.map((r) => {
@@ -69,12 +69,12 @@ export function LaunchOutcomes() {
               <li key={r.pad} className="grid gap-2 px-4 py-3 sm:grid-cols-[12rem_minmax(0,1fr)_9rem] sm:items-center">
                 <p>
                   <span className={cx("text-[14px]", r.pad === "all" ? "font-semibold text-text" : "text-text")}>{PAD[r.pad] ?? r.pad}</span>
-                  <span className="block font-mono text-[12px] text-muted">{`${r.total.toLocaleString("en-US")} launches`}</span>
+                  <span className="block font-mono text-[13px] text-muted">{`${r.total.toLocaleString("en-US")} launches`}</span>
                 </p>
                 <div className="flex h-3 w-full overflow-hidden bg-[#141414]" role="img" aria-label={PARTS.map((p) => `${p.label} ${r[p.k]}`).join(", ")}>
                   {PARTS.map((p) => (r[p.k] ? <span key={p.k} className={p.color} style={{ width: `${(r[p.k] / r.total) * 100}%` }} /> : null))}
                 </div>
-                <p className="font-mono text-[12.5px] text-muted sm:text-right">
+                <p className="font-mono text-[13px] text-muted sm:text-right">
                   <span className="text-text">{pct(reached, r.total)}</span> reached a pool
                   {r.drained > 0 && <span className="block text-flesh">{`${r.drained} drained`}</span>}
                 </p>

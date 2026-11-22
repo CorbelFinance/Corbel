@@ -252,7 +252,7 @@ export function XrayLaunch() {
         {live && (
           <span className="text-text">
             Live · {live.pools24.toLocaleString("en")} pools in 24h
-            {live.drained !== null && <span className="text-flesh"> · {Math.round(live.drained * 100)}% of V2 pairs drained</span>}
+            {live.drained !== null && <span className="text-flesh"> · {Math.round(live.drained * 100)}% of funded V2 pairs drained</span>}
           </span>
         )}
       </p>

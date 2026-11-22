@@ -126,7 +126,7 @@ export function Header() {
           <Socials className="hidden lg:flex" />
           <a
             href={APP_HREF}
-            className="inline-flex h-9 items-center gap-2 border border-leaf/60 px-3.5 font-mono text-xs uppercase tracking-[0.08em] text-leaf transition-colors hover:bg-leaf hover:text-bg"
+            className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-leaf/60 px-3.5 font-mono text-xs uppercase tracking-[0.08em] text-leaf transition-colors hover:bg-leaf hover:text-bg"
           >
             Open App
           </a>

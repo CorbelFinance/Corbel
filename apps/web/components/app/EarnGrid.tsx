@@ -25,10 +25,12 @@ const usd = (v: number) => (Math.abs(v) >= 1e6 ? `$${(v / 1e6).toFixed(2)}M` : M
 const pct = (v: number, d = 1) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(d)}%`;
 // the pool's base comes as a symbol ("USDG") or as an address, depending on the reader: both name the same two tokens
 const baseSym = (b: string) => (b.toUpperCase() === "USDG" || b.toLowerCase() === "0x5fc5360d0400a0fd4f2af552add042d716f1d168" ? "USDG" : "WETH");
+/** A headline over the day-by-day record needs at least this many days: one day of fees says nothing about a month. */
+const MIN_DAYS = 3;
 const SCAN = "https://robinhoodchain.blockscout.com/address/";
 
 function Curve({ v, w = 140, h = 34, strong }: { v: number[]; w?: number; h?: number; strong?: boolean }) {
-  if (v.length < 2) return <span className="font-mono text-[12px] text-muted">reading days…</span>;
+  if (v.length < 2) return <span className="font-mono text-[13px] text-muted">{v.length === 1 ? "1 day so far" : "no full day yet"}</span>;
   const lo = Math.min(0, ...v), hi = Math.max(0, ...v), span = hi - lo || 1;
   const X = (i: number) => (i / (v.length - 1)) * w, Y = (x: number) => h - ((x - lo) / span) * h;
   const d = v.map((x, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(x).toFixed(1)}`).join(" ");
@@ -47,7 +49,7 @@ function Curve({ v, w = 140, h = 34, strong }: { v: number[]; w?: number; h?: nu
 function Paid({ d }: { d: Days }) {
   return (
     <span className="flex items-center gap-2">
-      <span className="font-mono text-[13px] text-text">{`${d.paid}/${d.n}`}</span>
+      <span className="font-mono text-[14px] text-text">{`${d.paid}/${d.n}`}</span>
       <span className="flex gap-[2px]">
         {Array.from({ length: d.n }, (_, i) => (
           <i key={i} className={cx("h-3 w-[3px] rounded-[1px]", i < d.paid ? "bg-leaf/80" : "bg-[#2a2a2a]")} />
@@ -63,7 +65,7 @@ const LINE_TONES = ["var(--leaf)", "#9b86e4", "#6cc0d0", "#f2c46d", "#ff8fa3", "
 /** The selected pool's window, one bar per day: what an LP kept that day after price moves. */
 function DayBars({ r }: { r: Row }) {
   const c = r.days?.curve ?? [];
-  if (c.length < 2) return <p className="caret font-mono text-[12px] text-muted">Reading the days</p>;
+  if (c.length < 2) return <p className="caret font-mono text-[13px] text-muted">Reading the days</p>;
   const daily = c.map((v, i) => v - (i ? c[i - 1]! : 0));
   const m = Math.max(...daily.map((v) => Math.abs(v)), 1e-9);
   let best = 0, worst = 0, run = 0, streak = 0;
@@ -87,7 +89,7 @@ function DayBars({ r }: { r: Row }) {
           </span>
         ))}
       </div>
-      <p className="mt-1 flex justify-between font-mono text-[12px] text-muted">
+      <p className="mt-1 flex justify-between font-mono text-[13px] text-muted">
         <span>{`${daily.length} days ago`}</span>
         <span>today</span>
       </p>
@@ -100,9 +102,9 @@ function DayBars({ r }: { r: Row }) {
           ] as const
         ).map(([k, v, tone, sub]) => (
           <div key={k} className="rounded-xl bg-[#0d0d0d] px-3 py-2">
-            <dt className="text-[12px] text-muted">{k}</dt>
+            <dt className="text-[13px] text-muted">{k}</dt>
             <dd className={cx("font-mono text-[15px]", tone)}>{v}</dd>
-            <dd className="text-[12px] text-muted">{sub}</dd>
+            <dd className="text-[13px] text-muted">{sub}</dd>
           </div>
         ))}
       </dl>
@@ -113,7 +115,7 @@ function DayBars({ r }: { r: Row }) {
 /** Every pool's window on one chart, so the shapes compare at a glance. */
 function AllCurves({ rows, sel, onPick }: { rows: Row[]; sel: string | null; onPick: (p: string) => void }) {
   const ls = rows.filter((r) => (r.days?.curve.length ?? 0) > 1);
-  if (!ls.length) return <p className="caret font-mono text-[12px] text-muted">Reading the pools</p>;
+  if (!ls.length) return <p className="caret font-mono text-[13px] text-muted">Reading the pools</p>;
   // a square-root scale, so one pool with a deep loss does not flatten the rest; every line ends at today
   const sq = (v: number) => Math.sign(v) * Math.sqrt(Math.abs(v));
   const all = ls.flatMap((r) => r.days!.curve.map(sq));
@@ -134,7 +136,7 @@ function AllCurves({ rows, sel, onPick }: { rows: Row[]; sel: string | null; onP
           })}
         </svg>
       </div>
-      <p className="mt-1 flex justify-between font-mono text-[12px] text-muted">
+      <p className="mt-1 flex justify-between font-mono text-[13px] text-muted">
         <span>{`${N} days ago`}</span>
         <span>square-root scale</span>
         <span>today</span>
@@ -142,7 +144,7 @@ function AllCurves({ rows, sel, onPick }: { rows: Row[]; sel: string | null; onP
       <ul className="mt-3 flex flex-wrap gap-1.5">
         {ls.map((r, k) => (
           <li key={r.pair}>
-            <button type="button" onClick={() => onPick(r.pair)} aria-pressed={r.pair === sel} className={cx("flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[12px]", r.pair === sel ? "border-leaf text-text" : "border-line text-muted hover:text-text")}>
+            <button type="button" onClick={() => onPick(r.pair)} aria-pressed={r.pair === sel} className={cx("flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[13px]", r.pair === sel ? "border-leaf text-text" : "border-line text-muted hover:text-text")}>
               <i className="h-2 w-2 rounded-full" style={{ background: LINE_TONES[k % LINE_TONES.length] }} />
               {r.symbol}
               <span className={r.days!.total >= 0 ? "text-leaf" : "text-flesh"}>{pct(r.days!.total)}</span>
@@ -184,14 +186,14 @@ export function EarnGrid() {
   const made = sel?.days ? amount * sel.days.total : null;
   const recorded = sel?.covered ?? 0;
   // the page's answer: which pool left an LP ahead after price moves, and by how much
-  const best = [...(rows ?? [])].filter((r) => r.days && !r.doubt).sort((a, b) => b.days!.total - a.days!.total)[0];
+  // the window the record really covers (it fills toward thirty days), named as it is; a headline needs 3 days
+  const win = Math.max(0, ...(rows ?? []).map((r) => r.days?.n ?? 0));
+  const best = win >= MIN_DAYS ? [...(rows ?? [])].filter((r) => r.days && !r.doubt).sort((a, b) => b.days!.total - a.days!.total)[0] : undefined;
   const ahead = (rows ?? []).filter((r) => r.days && !r.doubt && r.days.total > 0).length;
   const withDays = (rows ?? []).filter((r) => r.days && !r.doubt).length;
   // before the record has days: the best of the last day, from pools no check doubts
   const day = [...(rows ?? [])].filter((r) => !r.doubt && r.apr != null).sort((a, b) => (b.apr ?? 0) - (a.apr ?? 0))[0];
-  // the window the record really covers (it fills toward thirty days), named as it is
-  const win = Math.max(0, ...(rows ?? []).map((r) => r.days?.n ?? 0));
-  const span = win >= 30 ? "the last 30 days" : `the last ${win} day${win === 1 ? "" : "s"}`;
+  const span = win >= 30 ? "the last 30 days" : win >= 2 ? `the last ${win} days` : "the last 24 hours";
 
   return (
     <div className="space-y-4">
@@ -222,7 +224,7 @@ export function EarnGrid() {
           ["Deepest", usd(Math.max(...(rows ?? []).map((r) => r.liquidity)))],
         ]}
       >
-        The day-by-day record is being rebuilt from the chain and fills in over the next hours. Until then this is one day, not a month.
+        {`One day of swaps, not a month. The record needs ${MIN_DAYS} full days to name a pool that kept LPs ahead: ${win} so far.`}
       </Verdict>
     ) : (
       <div aria-hidden className="h-40 rounded-2xl border border-line bg-[#0e0e0e] p-8">
@@ -235,16 +237,16 @@ export function EarnGrid() {
         <header className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3.5">
           <div>
             <p className="text-[15px] font-semibold text-text">{`Pools, ${span}`}</p>
-            <p className="text-[12px] text-muted">After fees: what an LP kept once price moves took their share back.</p>
+            <p className="text-[13px] text-muted">After fees: what an LP kept once price moves took their share back.</p>
           </div>
           <div className="ml-auto">
             <SubTabs label="Sort" value={sort} onChange={setSort} tabs={SORTS} />
           </div>
         </header>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-left text-[13px]">
+          <table className="w-full min-w-[820px] border-collapse text-left text-[14px]">
             <thead>
-              <tr className="border-b border-line font-medium text-[12px] uppercase tracking-[0.08em] text-muted">
+              <tr className="border-b border-line font-medium text-[13px] uppercase tracking-[0.08em] text-muted">
                 {["Pair", "After fees", "Paid", "Fees back", "Now", "Avg APR"].map((h, i) => (
                   <th key={h} className={cx("px-4 py-2.5 font-normal", i >= 3 && "text-right")}>
                     {h}
@@ -255,7 +257,7 @@ export function EarnGrid() {
             <tbody>
               {!rows && (
                 <tr>
-                  <td colSpan={6} className="caret px-4 py-8 font-mono text-[12px] text-muted">
+                  <td colSpan={6} className="caret px-4 py-8 font-mono text-[13px] text-muted">
                     Reading the pools
                   </td>
                 </tr>
@@ -270,15 +272,15 @@ export function EarnGrid() {
                         <TokenAvatar address={r.token} symbol={r.symbol} size={28} />
                         <span>
                           <Link href={`/app/pool/${r.pair}`} onClick={(e) => e.stopPropagation()} className="block font-mono text-text hover:text-leaf hover:underline">{`${r.symbol}/${baseSym(r.base)}`}</Link>
-                          <span className="block text-[12px] text-muted">{`${usd(r.liquidity)} deep`}</span>
-                          {r.doubt && <span title="A second check did not confirm this pool's figures" className="mt-0.5 block text-[12px] text-amber">{`In doubt: ${r.doubt}`}</span>}
+                          <span className="block text-[13px] text-muted">{`${usd(r.liquidity)} deep`}</span>
+                          {r.doubt && <span title="A second check did not confirm this pool's figures" className="mt-0.5 block text-[13px] text-amber">{`In doubt: ${r.doubt}`}</span>}
                         </span>
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-3">
                         <Curve v={r.days?.curve ?? []} />
-                        {r.days && <span className={cx("font-mono text-[12px]", r.days.total >= 0 ? "text-leaf" : "text-flesh")}>{pct(r.days.total)}</span>}
+                        {r.days && <span className={cx("font-mono text-[13px]", r.days.total >= 0 ? "text-leaf" : "text-flesh")}>{pct(r.days.total)}</span>}
                       </span>
                     </td>
                     <td className="px-4 py-3">{r.days ? <Paid d={r.days} /> : <span className="text-muted">—</span>}</td>
@@ -295,21 +297,21 @@ export function EarnGrid() {
           <div className="grid flex-1 grid-cols-1 gap-px border-t border-line bg-line lg:grid-cols-2">
             <div className="bg-[#0f0f0f] px-5 py-4">
               <p className="mb-3 flex items-baseline justify-between gap-3">
-                <span className="text-[13.5px] font-semibold text-text">{`${sel.symbol}/${baseSym(sel.base)}, day by day`}</span>
-                <span className="font-mono text-[12px] text-muted">kept after fees each day</span>
+                <span className="text-[14px] font-semibold text-text">{`${sel.symbol}/${baseSym(sel.base)}, day by day`}</span>
+                <span className="font-mono text-[13px] text-muted">kept after fees each day</span>
               </p>
               <DayBars r={sel} />
             </div>
             <div className="bg-[#0f0f0f] px-5 py-4">
               <p className="mb-3 flex items-baseline justify-between gap-3">
-                <span className="text-[13.5px] font-semibold text-text">Every pool, side by side</span>
-                <span className="font-mono text-[12px] text-muted">click one to open it</span>
+                <span className="text-[14px] font-semibold text-text">Every pool, side by side</span>
+                <span className="font-mono text-[13px] text-muted">click one to open it</span>
               </p>
               <AllCurves rows={list} sel={sel.pair} onPick={setPick} />
             </div>
           </div>
         )}
-        <p className="border-t border-line px-5 py-3 text-[12px] text-muted">Paid: days that ended ahead after fees. Fees back: days of average fees that pay back the window&apos;s whole price-move loss. The past, not a promise.</p>
+        <p className="border-t border-line px-5 py-3 text-[13px] text-muted">Paid: days that ended ahead after fees. Fees back: days of average fees that pay back the window&apos;s whole price-move loss. The past, not a promise.</p>
       </section>
 
       <aside className="xl:sticky xl:top-24 xl:self-start">
@@ -320,12 +322,12 @@ export function EarnGrid() {
                 <TokenAvatar address={sel.token} symbol={sel.symbol} size={34} />
                 <span>
                   <span className="block font-mono text-[15px] text-text">{`${sel.symbol}/${baseSym(sel.base)}`}</span>
-                  <span className="block text-[12px] text-muted">{`Uniswap V2 · 0.3% fee · ${usd(sel.liquidity)} deep`}</span>
+                  <span className="block text-[13px] text-muted">{`Uniswap V2 · 0.3% fee · ${usd(sel.liquidity)} deep`}</span>
                 </span>
               </header>
               <div className="px-5 py-4">
                 <label className="block">
-                  <span className="flex justify-between text-[12px] text-muted">
+                  <span className="flex justify-between text-[13px] text-muted">
                     If you had put in
                     <span className="font-mono text-text">{usd(amount)}</span>
                   </span>
@@ -333,7 +335,7 @@ export function EarnGrid() {
                 </label>
                 <div className="mt-4 rounded-xl bg-[#0d0d0d] p-3">
                   <Curve v={sel.days?.curve ?? []} w={330} h={110} strong />
-                  <p className="mt-2 flex justify-between font-mono text-[12px] text-muted">
+                  <p className="mt-2 flex justify-between font-mono text-[13px] text-muted">
                     <span>{sel.days ? `${sel.days.n} days ago` : ""}</span>
                     <span>today</span>
                   </p>
@@ -348,7 +350,7 @@ export function EarnGrid() {
                     ] as const
                   ).map(([k, v, bad]) => (
                     <div key={k} className="rounded-xl bg-[#0d0d0d] px-3 py-2.5">
-                      <dt className="text-[12px] text-muted">{k}</dt>
+                      <dt className="text-[13px] text-muted">{k}</dt>
                       <dd className={cx("font-mono text-[16px]", bad ? "text-flesh" : "text-text")}>{v}</dd>
                     </div>
                   ))}
@@ -356,15 +358,15 @@ export function EarnGrid() {
                 <div className="mt-4">
                   <EarnDeposit key={sel.pair} pair={sel.pair} token={sel.token} symbol={sel.symbol} base={sel.base} apr={sel.days?.avgApr ?? sel.apr ?? 0} />
                 </div>
-                {recorded < 30 && <p className="mt-3 text-[12px] text-muted">{`${recorded} of 30 days recorded so far; the rest fills in within the hour.`}</p>}
+                {recorded < 30 && <p className="mt-3 text-[13px] text-muted">{`${recorded} of 30 days recorded so far; the rest fills in within the hour.`}</p>}
                 <div className="mt-4 flex gap-2">
-                  <Link href={`/app/pool/${sel.pair}`} className="flex-1 rounded-xl bg-ui py-2.5 text-center text-[13px] font-semibold text-[#0b0b0b]">
+                  <Link href={`/app/pool/${sel.pair}`} className="flex-1 rounded-xl bg-ui py-2.5 text-center text-[14px] font-semibold text-[#0b0b0b]">
                     Day by day
                   </Link>
-                  <Link href={`/app/trade/terminal?token=${sel.token}`} className="flex-1 rounded-xl border border-line py-2.5 text-center text-[13px] text-text hover:border-ui/60">
+                  <Link href={`/app/trade/terminal?token=${sel.token}`} className="flex-1 rounded-xl border border-line py-2.5 text-center text-[14px] text-text hover:border-ui/60">
                     Chart
                   </Link>
-                  <a href={`${SCAN}${sel.pair}`} target="_blank" rel="noreferrer" className="flex-1 rounded-xl border border-line py-2.5 text-center text-[13px] text-text hover:border-ui/60">
+                  <a href={`${SCAN}${sel.pair}`} target="_blank" rel="noreferrer" className="flex-1 rounded-xl border border-line py-2.5 text-center text-[14px] text-text hover:border-ui/60">
                     Pool ↗
                   </a>
 
@@ -372,7 +374,7 @@ export function EarnGrid() {
               </div>
             </>
           ) : (
-            <p className="caret px-5 py-8 font-mono text-[12px] text-muted">Reading the pools</p>
+            <p className="caret px-5 py-8 font-mono text-[13px] text-muted">Reading the pools</p>
           )}
         </section>
       </aside>
