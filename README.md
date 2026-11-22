@@ -17,11 +17,12 @@ Check a token before you buy it, swap at the best route, earn from pool fees, ru
 
 | | Section | What it does |
 |---|---|---|
-| 01 | **Check** | Seven checks on any Robinhood Chain token before you buy: a simulated buy and sell, exit now, tax, owner powers, liquidity lock, ticker clones and the creator's record. One score with the reasons behind it. |
-| 02 | **Swap** | Quotes every route (V2, v4, two hops through ETH or USDG) at the latest block and shows amount out, gas and price impact before you sign. |
-| 03 | **Earn** | Pool fees and positions in one place, with the numbers each pool actually paid. |
-| 04 | **Agents** | Bots that trade inside rules you set. Every agent posts a bond; a trade that breaks a rule is stopped on-chain and the bond pays for it. |
-| 05 | **AI & GPUs** | Text, image, film and sound models in one chat, paid per use. |
+| 01 | **Check** | Seven checks on any Robinhood Chain token before you buy: a simulated buy and sell, exit now, tax, owner powers, liquidity lock, ticker clones and the creator's record. One score with the reasons behind it. Also: what happened to every new pool, how much of the volume is bots, whether buyers still hold, every token one wallet launched, and how accurate the check has been. |
+| 02 | **Trade** | Quotes every route (V2, v4, two hops through ETH or USDG) at the latest block. Practice on paper USDG with no wallet. Orders (limit, take profit, stop, DCA, TWAP) wait in your browser and open the swap for your wallet to sign. Sell many small holdings into ETH, and see every swap with who signed it. |
+| 03 | **Earn** | Pool fees and positions in one place, with the numbers each pool actually paid and the token check run before a deposit. |
+| 04 | **Wallet** | See which contracts can move your tokens, and revoke the risky ones with one transaction you sign. |
+| 05 | **Agents** | Bots that trade inside rules you set. Every agent posts a bond; a trade that breaks a rule is stopped on-chain and the bond pays for it. An agent gets its own wallet, made in your browser. It can draft rules from your practice trades, backtest exits on real swaps, and be scored in a survival league or on the Prop desk. |
+| 06 | **AI & GPUs** | Text, image, film and sound models in one chat, free after a wallet sign-in, with more for $CORBEL holders. Full holders get free GPU time with a picture editor, a chat or a notebook. |
 
 Corbel never asks for a key or a seed phrase. Everything a wallet signs is shown in plain words before it is signed.
 
@@ -65,11 +66,11 @@ Retired: the first CorbelPredict (`0x2AC3…0f63`, price markets had a resolver;
 | Finding | Fix | Where |
 |---|---|---|
 | A bonded agent could route through its own pools and take the daily budget | Rule 06: owner-approved pools, price held to the owner's mark | live in `0xdea0…4d36`; refused on mainnet: [tx](https://robinhoodchain.blockscout.com/tx/0xffbc4d37dc2f4d9a97fc8d93532b227f7307994b1cff597d758e3dd6f63a66b2) |
-| Same in `CorbelAgentVault` | Owner-approved pairs and price mark | `1593945` (not deployed) |
+| Same in `CorbelAgentVault` | Owner-approved pairs and price mark | in the source (not deployed) |
 | The owner could not revoke a bonded agent | `setAgent` works at any time; the old agent's bond goes back to it | live in `0xdea0…4d36`; on mainnet: [tx](https://robinhoodchain.blockscout.com/tx/0xb624936c903bcffe89b0263ffbd981718e6455083575d33f3045dd1b3f7ef4ea) |
-| A launch could be blocked by pre-seeding its v4 pool | `CorbelLaunchGate` hook: only the sale opens the pool before graduation | `e523e06` (not deployed) |
+| A launch could be blocked by pre-seeding its v4 pool | `CorbelLaunchGate` hook: only the sale opens the pool before graduation | in the source (not deployed) |
 | The Predict resolver proposed outcomes and ruled on challenges to them | Resolver removed: price markets settle from the pool's TWAP | live in `0x6223…73d9` |
-| `packages/data` and the contract scripts were missing; the build failed | Included; a clean clone typechecks and builds | `1593945`, `4c1aab6` |
+| `packages/data` and the contract scripts were missing; the build failed | Included; a clean clone typechecks and builds | in the source |
 
 Full reference: **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
 
@@ -102,14 +103,14 @@ pnpm --filter @corbel/contracts test:contracts           # contracts, local, no 
 ```
 apps/web/              the site and the app (Next.js 16, React, Tailwind 4)
   app/api/             token checks, quotes, holders, pools, chat, media, wallet sign-in
-  components/app/      the tools: check, terminal, radar, earn, agents, wallet, AI chat
+  components/app/      the tools: check, terminal, radar, practice, orders, earn, approvals, agents, AI chat
   lib/                 chain reads, the trust score, the claims check, fair-use limits
 packages/config/       brand, chain, flags, facts and every line of copy
 packages/contracts/    Solidity contracts, tests and verification inputs
 packages/indexer/      a small log indexer for launches and pools
 packages/mcp/          read-only MCP server for AI agents
 packages/ui/           design tokens and primitives
-docs/                  trust engine, chain notes, contracts, design and copy rules
+docs/                  trust engine, chain notes, contracts and copy rules
 ```
 
 ## Security
