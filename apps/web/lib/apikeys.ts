@@ -65,3 +65,9 @@ export function keyOf(req: Request): string | "over" | null {
   d.prepare("UPDATE keys SET day = ?, uses = ?, last = ? WHERE hash = ?").run(day, uses + 1, Date.now(), h);
   return h;
 }
+
+/** The wallet that owns a key, by the key's hash. */
+export function keyOwner(hash: string): string | null {
+  const r = db()?.prepare("SELECT owner FROM keys WHERE hash = ?").get(hash) as { owner: string } | undefined;
+  return r?.owner ?? null;
+}

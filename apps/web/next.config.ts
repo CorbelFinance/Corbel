@@ -58,6 +58,8 @@ const config: NextConfig = {
       { source: "/(.*)", headers: securityHeaders },
       // API answers are data, never pages: no caching by intermediaries unless a route says so
       { source: "/api/(.*)", headers: [{ key: "X-Robots-Tag", value: "noindex" }] },
+      // the check badge is made to be shown on other sites: only this one route may be loaded cross-origin
+      { source: "/api/badge", headers: [{ key: "Cross-Origin-Resource-Policy", value: "cross-origin" }] },
     ];
   },
 };

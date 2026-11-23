@@ -7,6 +7,7 @@
  */
 import { useEffect, useState } from "react";
 import { cx } from "@corbel/ui";
+import { AI_ACCESS } from "@corbel/config";
 
 type Desk = {
   open: boolean;
@@ -84,7 +85,7 @@ export function GpuDesk() {
           <div className="bg-[#0d0907] p-5">
             <p className="font-mono text-[11.5px] uppercase tracking-[0.1em] text-[#a8907f]">Booked starts</p>
             <p className="mt-1 font-mono text-[28px] tabular-nums text-text">{d.booked}</p>
-            <p className="mt-2 font-mono text-[11.5px] text-[#a8907f]">{`${d.minutesPerDay} free min a day per Full wallet`}</p>
+            <p className="mt-2 font-mono text-[11.5px] text-[#a8907f]">{`Free minutes a day by tier: ${AI_ACCESS.tiers.filter((t) => t.gpuMinutes).map((t) => `${t.name} ${t.gpuMinutes}`).join(" · ")}`}</p>
           </div>
         </div>
       )}

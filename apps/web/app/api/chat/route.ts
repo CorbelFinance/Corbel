@@ -1,4 +1,4 @@
-import { AI_ACCESS } from "@corbel/config";
+import { AI_ACCESS, hasFull, FULL_TIER } from "@corbel/config";
 import { createHash } from "node:crypto";
 import { limit } from "@/lib/limits";
 import { limitKey, noteVisit, startLinker } from "@/lib/sybil";
@@ -8,6 +8,7 @@ import { session, sameOrigin } from "@/lib/auth";
 import { availReady, isAvailable, models, providerModel } from "@/lib/compute";
 import { guardWait } from "@/lib/guard";
 import { store } from "@/lib/store";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
     await availReady();
     const lim = tierOf(s?.address)?.text ?? perWallet();
     const guestLeft = s ? null : guestsToday() >= GUEST_ALL ? 0 : Math.max(0, GUEST_PER_DAY - used(guestOf(req)));
-    return Response.json({ signedIn: !!s, top: tierOf(s?.address)?.id === "full", limit: lim, left: s ? Math.max(0, lim - used(who(limitKey(s.address).key))) : null, guestLeft, guestPerDay: GUEST_PER_DAY, models: [...chatModels(), ...allTextModels()] }, { headers: { "cache-control": "no-store" } });
+    return Response.json({ signedIn: !!s, top: hasFull(tierOf(s?.address)), limit: lim, left: s ? Math.max(0, lim - used(who(limitKey(s.address).key))) : null, guestLeft, guestPerDay: GUEST_PER_DAY, models: [...chatModels(), ...allTextModels()] }, { headers: { "cache-control": "no-store" } });
   } finally {
     g.release();
   }
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
     const full = model.startsWith("x:");
     const tier = s ? tierOf(s.address) : null;
     if (guest && full) return Response.json({ error: "Sign in with your wallet to use this model." }, { status: 401 });
-    if (full && tier?.id !== "full") return Response.json({ error: `This model is for Full holders: ${AI_ACCESS.tiers.at(-1)!.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
+    if (full && !hasFull(tier)) return Response.json({ error: `This model is for Full holders: ${FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
     if (full && !textModel(model)) return Response.json({ error: "This model is not open right now. Pick another one." }, { status: 400 });
     if (!full && (!base || !key)) return Response.json({ error: "Chat is not open right now." }, { status: 503 });
     const route = full ? model : model && isAvailable(model) ? providerModel(model) : null;
@@ -136,6 +137,7 @@ export async function POST(req: Request) {
           const send = (o: unknown) => c.enqueue(enc.encode(`data: ${JSON.stringify(o)}\n\n`));
           try {
             for await (const t of askText(model, prompt, AbortSignal.any([req.signal, AbortSignal.timeout(200_000)]))) send({ t });
+            award(req, "chat"); // points only once the answer came through whole
             send({ done: true, left });
           } catch (e) {
             send({ error: e instanceof Error ? e.message : "The model did not answer.", left });
@@ -191,6 +193,7 @@ export async function POST(req: Request) {
               }
             }
           }
+          award(req, "chat"); // points only once the answer came through whole
           send({ done: true, left });
         } catch {
           send({ error: "The answer was cut off.", left });

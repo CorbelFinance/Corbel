@@ -158,6 +158,13 @@ export const TOKEN = {
   contract: "0xaa1f4de6b9f7cdf11fb8aa97ce163d35d731cdb1",
   explorer: "https://robinhoodchain.blockscout.com/token/0xaa1f4de6b9f7cdf11fb8aa97ce163d35d731cdb1",
   buy: "https://ponsfamily.com/launchpad/0xaa1f4de6b9f7cdf11fb8aa97ce163d35d731cdb1",
+  /** HoodLock's locker contract: every coin in it is a team lock (checked on chain, 22 Nov 2026). */
+  locker: "0xD0f7d8c6e9f6D80c297bEbe4F7fD1B9C8125C32F",
+  /** Public proof pages of team locks we can link to. */
+  lockProofs: [
+    { id: 801, href: "https://hoodlock.tech/proof/lock/801" },
+    { id: 802, href: "https://hoodlock.tech/proof/lock/802" },
+  ],
   items: [
     {
       name: "AI for holders",
@@ -222,12 +229,12 @@ export const TOKEN = {
     },
     {
       name: "What we won't do",
-      kicker: "Commitment",
-      line: "No buyback-and-burn as a reason to hold. Demand has to come from use.",
+      kicker: "Commitment · updated 22 Nov 2026",
+      line: "Never a reason to hold, never a word on price. Demand has to come from use. Burns only take coins spent on Corbel. Buybacks only use revenue already earned, by a rule published first.",
       rows: [
-        ["Buyback pitch", "No"],
-        ["Burn pitch", "No"],
-        ["Status", "Commitment"],
+        ["Burn", "Only coins spent on Corbel"],
+        ["Buyback", "Earned revenue, published rule"],
+        ["Price talk", "Never"],
       ],
     },
     {
@@ -281,6 +288,7 @@ export const FOOTER = {
         { label: "Open data", href: "/#data" },
         { label: "Token", href: "/#token" },
         { label: "FAQ", href: "/#faq" },
+        { label: "Rewards", href: "/rewards" },
         { label: "Roadmap", href: "/roadmap" },
         { label: "Changelog", href: "/changelog" },
         { label: "Accuracy", href: "/accuracy" },
@@ -317,6 +325,7 @@ export const NAV = [
   { label: "Safety", href: "/#safety" },
   { label: "Token", href: "/#token" },
   { label: "FAQ", href: "/#faq" },
+  { label: "Rewards", href: "/rewards" },
   { label: "Roadmap", href: "/roadmap" },
   { label: "Changelog", href: "/changelog" },
   { label: "Analytics", href: "/analytics" },

@@ -1,4 +1,5 @@
 import { Accuracy } from "@/components/site/Accuracy";
+import { VerdictLedger } from "@/components/site/VerdictLedger";
 
 export const metadata = {
   title: "How accurate is the token check",
@@ -20,6 +21,7 @@ export default function AccuracyPage() {
       <div className="mt-14">
         <Accuracy />
       </div>
+      <VerdictLedger />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { sameOrigin, session } from "@/lib/auth";
 import { guardWait } from "@/lib/guard";
 import { addWatch, listWatch, removeWatch } from "@/lib/watchlist";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,7 +26,9 @@ export const POST = (req: Request) =>
   run(req, async (owner) => {
     const b = (await req.json().catch(() => null)) as { kind?: string; value?: string; label?: string } | null;
     const err = addWatch(owner, String(b?.kind ?? ""), String(b?.value ?? "").trim(), String(b?.label ?? ""));
-    return err ? Response.json({ error: err }, { status: 400 }) : Response.json({ items: listWatch(owner) ?? [] });
+    if (err) return Response.json({ error: err }, { status: 400 });
+    award(req, "watch", `${owner}:${String(b?.value ?? "").trim().toLowerCase()}`);
+    return Response.json({ items: listWatch(owner) ?? [] });
   });
 
 export const DELETE = (req: Request) =>

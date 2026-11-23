@@ -1,7 +1,8 @@
 import { guardWait } from "@/lib/guard";
 import { autoPick, modeOf } from "@/lib/autopick";
 import { isAvailable, models, modelsReady, providerModel, type Model } from "@/lib/compute";
-import { charge, MARKUP, modelKeyOf, balance } from "@/lib/credits";
+import { charge, modelKeyOf, balance } from "@/lib/credits";
+import { markupOf } from "@/lib/markup";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,14 +10,14 @@ export const runtime = "nodejs";
 /**
  * POST /api/v1/chat/completions: the OpenAI chat shape, paid from Credits with a Corbel model key
  * (Authorization: Bearer cm_…). model is a catalogue id or "auto", "auto:price", "auto:speed", "auto:quality".
- * Priced at the catalogue's list price plus MARKUP, per token used; before a call the most it could cost (its input and
+ * Priced at the catalogue's list price plus the key owner's markup by tier (lib/markup), per token used; before a call the most it could cost (its input and
  * max_tokens) must fit in what the key may still spend. The model, the answer and
  * the usage come back, with the cost and the balance left.
  */
 const MAX_TOKENS = 8192;
 type Msg = { role: string; content: unknown };
 
-const price = (m: Model, inTok: number, outTok: number) => ((inTok * m.pin + outTok * m.pout) / 1e6) * (1 + MARKUP);
+const price = (m: Model, inTok: number, outTok: number, owner: string) => ((inTok * m.pin + outTok * m.pout) / 1e6) * (1 + markupOf(owner));
 const textOf = (c: unknown) => (typeof c === "string" ? c : Array.isArray(c) ? c.map((p) => (p && typeof p === "object" && "text" in p ? String((p as { text: unknown }).text) : "")).join(" ") : "");
 const err = (message: string, status: number) => Response.json({ error: { message, type: "corbel_error" } }, { status });
 
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     if (!route) return err("This model is not open right now.", 400);
     const maxTokens = Math.min(MAX_TOKENS, Math.max(1, Number(j?.max_tokens) || 1024));
     const inEst = Math.ceil(msgs.reduce((a, m) => a + textOf(m.content).length, 0) / 3);
-    const most = price(model, inEst, maxTokens);
+    const most = price(model, inEst, maxTokens, k.owner);
     if (most > k.left) return err(`This call could cost up to $${most.toFixed(4)}, more than this key may still spend ($${k.left.toFixed(4)}). Top up, raise the key's cap or lower max_tokens.`, 402);
     const stream = j?.stream === true;
     const body: Record<string, unknown> = { model: route, messages: msgs, max_tokens: maxTokens, stream };
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
     if (!stream) {
       const r = (await up.json()) as { choices?: { message?: { role: string; content: string }; finish_reason?: string }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const pin = r.usage?.prompt_tokens ?? inEst, pout = r.usage?.completion_tokens ?? 0;
-      const cost = charge(k.owner, "model", price(model, pin, pout), { key: k.hash, ref: model.id });
+      const cost = charge(k.owner, "model", price(model, pin, pout, k.owner), { key: k.hash, ref: model.id });
       return Response.json({
         object: "chat.completion",
         model: model.id,
@@ -96,7 +97,7 @@ export async function POST(req: Request) {
           }
         } finally {
           const pin = usage?.prompt_tokens ?? inEst, pout = usage?.completion_tokens ?? Math.ceil(outChars / 3);
-          const cost = charge(k.owner, "model", price(model, pin, pout), { key: k.hash, ref: model.id });
+          const cost = charge(k.owner, "model", price(model, pin, pout, k.owner), { key: k.hash, ref: model.id });
           ctl.enqueue(enc.encode(`data: ${JSON.stringify({ object: "chat.completion.chunk", model: model.id, choices: [], usage: { prompt_tokens: pin, completion_tokens: pout, total_tokens: pin + pout }, corbel: { cost_usd: cost, balance_usd: balance(k.owner).balance } })}\n\ndata: [DONE]\n\n`));
           ctl.close();
           release();

@@ -215,7 +215,7 @@ export function AskBar() {
           ) : (
             <kbd className="hidden shrink-0 rounded-md border border-line px-2 py-1 font-mono text-[12px] text-muted md:block">/</kbd>
           )}
-          <button type="submit" className="h-14 shrink-0 rounded-[18px] bg-leaf px-6 text-[16px] font-semibold text-bg transition-transform active:scale-95">
+          <button type="submit" className="h-14 shrink-0 rounded-[18px] bg-[#42ee8f] px-6 text-[16px] font-semibold text-[#0b0b0b] transition-transform active:scale-95">
             Go
           </button>
         </div>

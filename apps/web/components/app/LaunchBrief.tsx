@@ -161,6 +161,7 @@ export function LaunchBrief({ logOnly = false, verdict = true }: { logOnly?: boo
           tone={total ? "bad" : "good"}
           value={total}
           valueLabel={total ? "patterns flagged by the agent" : "nothing flagged"}
+          source={`index · launches by block · read ${new Date(b.at).toUTCString().slice(17, 22)} UTC`}
           facts={[
             ["Launched", b.counts.day.toLocaleString("en")],
             ["This hour", b.counts.hour],

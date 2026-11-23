@@ -20,7 +20,8 @@ type Stats = {
   liveness: { v2Known: number; v2Dead: number; v4Live: number; funded?: number; drained?: number; empty?: number };
 };
 
-const BLOCK_S = 1 / 9.5; // measured on 4663 (2026-11-18): ~9.5 blocks per second
+// seconds per block: the rate the API measured from the chain, a recent measurement until it answers
+let BLOCK_S = 1 / 8.7;
 const pct = (a: number, b: number) => (b > 0 ? `${((a / b) * 100).toFixed(1)}%` : "—");
 const ago = (head: number, block: number) => {
   const s = (head - block) * BLOCK_S;
@@ -135,6 +136,7 @@ export function LaunchAnalytics() {
         const j = await r.json();
         if (!r.ok) throw new Error((j as { error: string }).error);
         if (alive) {
+          if ((j as { bps?: number }).bps) BLOCK_S = 1 / (j as { bps: number }).bps;
           setS(j as Stats);
           setErr(null);
         }
@@ -165,6 +167,7 @@ export function LaunchAnalytics() {
         tone="bad"
         value={pct(s.liveness.v2Dead, s.liveness.v2Known)}
         valueLabel="of new V2 pairs that had liquidity are already drained"
+        source={s.head ? `index · up to block ${Number(s.head).toLocaleString("en-US")}` : undefined}
         facts={[
           ["Pools created", s.pools.toLocaleString("en")],
           ["Last 24h", last24.toLocaleString("en")],

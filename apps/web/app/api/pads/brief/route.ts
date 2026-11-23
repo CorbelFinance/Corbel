@@ -4,6 +4,7 @@ import { availReady, briefModel } from "@/lib/compute";
 import { guardWait } from "@/lib/guard";
 import { curveProgress } from "@/lib/curve";
 import { LOGO_DIR, padCurve } from "@/lib/padArt";
+import { blocksPerSecondNow } from "@/lib/blockRate";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,7 +15,6 @@ export const runtime = "nodejs";
  * the chain's money, names launched many times over, pools already drained), and has a small model write them up in
  * four short lines. The model only rewords the facts it is handed; if it is not available, the rules write the lines.
  */
-const BPS = 4;
 const MONEY = new Set(["USDG", "USDC", "USDT", "ETH", "WETH", "CBBTC", "BTC", "WBTC"]);
 type Flag = { kind: "serial" | "lookalike" | "clone" | "drained"; title: string; note: string; token?: string; creator?: string; pad?: string };
 type Near = { token: string; symbol: string | null; pad: string; sold: number; ago: number };
@@ -40,6 +40,7 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 function facts() {
   const st = indexStatus();
   if (!st?.high) return null;
+  const BPS = blocksPerSecondNow();
   const head = st.high, day = head - 86_400 * BPS, hour = head - 3600 * BPS;
   const curve = curveLaunches(day, 6000);
   const pools = launchesSince(day, 8000) ?? [];

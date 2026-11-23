@@ -22,6 +22,8 @@ beforeAll(async () => {
   process.env.GPU_IMAGE = "test/image";
   process.env.GPU_GATE_URL = "https://gate.test";
   process.env.CREDITS_TREASURY = "0x00000000000000000000000000000000000000ee";
+  // the wallets in these tests hold the Full tier (30 free minutes a day), as before tiers set the minutes
+  process.env.TOP_WALLETS = ["a1", "b1", "c1", "d2", "e1", "f1"].map((x) => `0x${x.padStart(40, "0")}`).join(",");
   G = await import("../lib/gpuRent");
 });
 beforeEach(() => {

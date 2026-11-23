@@ -16,3 +16,8 @@ export * from "./limiter.ts";
 export * from "./mandate.ts";
 export * from "./market.ts";
 export * from "./holders.ts";
+export * from "./trust/retention.ts";
+export * from "./preview.ts";
+export { CURVE_INIT } from "./trust/waivers.ts";
+export * from "./trust/address.ts";
+export * from "./trust/lpHolders.ts";

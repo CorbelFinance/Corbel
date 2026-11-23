@@ -10,6 +10,8 @@ import { useEffect, useMemo, useState } from "react";
 import { cx } from "@corbel/ui";
 import { TokenAvatar } from "./TokenAvatar";
 import { EarnDeposit } from "./EarnDeposit";
+import { PoolFeeHistory } from "./PoolFeeHistory";
+import { PoolHealth } from "./PoolHealth";
 
 type Daily = { day: number; swaps: number; vol: number; fees: number; liq: number; move: number; fy: number; il: number; net: number };
 type Days = { n: number; paid: number; curve: number[]; avgApr: number; feesBack: number | null; steadiness: number; total: number; daily: Daily[] };
@@ -181,6 +183,8 @@ export function EarnPool({ pair }: { pair: string }) {
           <p className="px-1 text-[12px] text-muted">Read from the pool&apos;s own swaps and reserves, day by day. A bigger position than the pool&apos;s volume earns a smaller share of fees. The past, not a promise.</p>
         </aside>
       </div>
+      <PoolHealth pair={row.pair} />
+      <PoolFeeHistory pair={row.pair} />
     </div>
   );
 }

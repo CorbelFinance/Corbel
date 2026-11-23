@@ -4,6 +4,7 @@ import { ensureV4, v4PoolsFor } from "@/lib/v4extra";
 import { guardWait } from "@/lib/guard";
 import { byToken, dsLinks, dsTokens } from "@/lib/pairs";
 import { keepSnap, loadSnap } from "@/lib/snapshot";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -153,15 +154,19 @@ export async function GET(req: Request) {
     const w = Math.min(36, Math.max(1, Number(new URL(req.url).searchParams.get("w") ?? 36) || 36));
     const key = `${address.toLowerCase()}:${w}`;
     const c = cache.get(key);
-    if (c && !(c.body as { none?: boolean }).none && Date.now() - c.at < TTL) return Response.json(c.body);
+    // a cached answer is still a use of the tool: it earns the same points
+    if (c && !(c.body as { none?: boolean }).none && Date.now() - c.at < TTL) return (award(req, "market"), Response.json(c.body));
     if (c && !(c.body as { none?: boolean }).none && Date.now() - c.at < STALE && getClient(process.env.RPC_URL)) {
       if (!inflight.has(key)) void asBackground(() => compute(address, w)).catch((e) => console.error("[api/market]", redact(e)));
+      award(req, "market");
       return Response.json(c.body);
     }
     const running = inflight.get(key);
     if (running) {
       try {
-        return Response.json(await running);
+        const body = await running;
+        award(req, "market");
+        return Response.json(body);
       } catch {
         // fall through to a fresh read
       }
@@ -171,7 +176,9 @@ export async function GET(req: Request) {
   const g = await guardWait(req, "market", 40_000);
   if ("blocked" in g) return g.blocked;
   try {
-    return await handle(req);
+    const res = await handle(req);
+    if (res.ok) award(req, "market");
+    return res;
   } finally {
     g.release();
   }

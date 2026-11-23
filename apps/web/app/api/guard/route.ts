@@ -15,7 +15,7 @@ export const runtime = "nodejs";
  *   side=buy|sell        buy: pay → token; sell: token → pay
  *   pay=USDG|ETH|WETH    the other side (default USDG)
  *   amount=…             what the agent puts in (pay units on a buy, token units on a sell)
- *   policy: maxIn, minScore (0–100), maxImpact (0.02 = 2%), must (check ids that may not fail,
+ *   policy: maxIn, minScore (0–90), maxImpact (0.02 = 2%), must (check ids that may not fail,
  *           default honeypot,tax,exit), hooks=0 (no hooked pools), allow, deny (comma-separated addresses)
  *
  * Deny-first: every rule must pass, and any rule that cannot be checked denies. The trade is simulated at
@@ -52,7 +52,7 @@ async function handle(req: Request) {
   if (!/^\d{1,30}(\.\d{1,30})?$/.test(amount) || Number(amount) <= 0) return Response.json({ error: "Pass amount above zero." }, { status: 400 });
 
   const maxIn = u.get("maxIn") ? Number(u.get("maxIn")) : null;
-  const minScore = Math.max(0, Math.min(100, Number(u.get("minScore") ?? 60) || 0));
+  const minScore = Math.max(0, Math.min(90, Number(u.get("minScore") ?? 60) || 0));
   const maxImpact = Math.max(0, Math.min(1, Number(u.get("maxImpact") ?? 0.02) || 0));
   const must = (u.get("must") ?? "honeypot,tax,exit").split(",").map((x) => x.trim()).filter(Boolean);
   const noHooks = u.get("hooks") === "0";

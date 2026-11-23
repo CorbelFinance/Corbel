@@ -13,17 +13,21 @@ import {IERC20Min, IPoolManager, IV2Factory, IV2Pair, IV2Router, PoolKey, SwapPa
  * Every trade is checked against five skills:
  *   1 ASSETS   both sides must be listed
  *   2 SIZE     input at most `maxPerTrade` (per token)
- *   3 BUDGET   input at most `maxPerDay` per UTC day (per token)
+ *   3 BUDGET   input at most `maxPerDay` per UTC day (per token), and at most `maxTotal` over the mandate's life
  *   4 PRICE    V2: minOut at least the pool's own quote minus `maxSlippageBps`;
  *              v4: the contract sets the price limit itself from the pool's current price, and only pools
  *              with a static fee of at most 1% and no hook (or a hook the owner approved) are allowed:
  *              a 99% fee or a hostile hook takes the money without moving the price
- *   5 WINDOW   UTC hours [hourFrom, hourTo), optional weekdays only, and a cooldown between trades
+ *   5 WINDOW   UTC hours [hourFrom, hourTo), optional weekdays only, a cooldown between trades, and an end date
+ *              (`endsAt`, set at most MAX_TERM ahead): after it every trade breaks the window
  *   6 POOL     every pool the trade touches (each V2 hop, the v4 pool) must be one the owner approved. Approval
  *              records the pool's price as the owner's mark; a trade reverts while the pool sits more than
  *              `maxSlippageBps` away from that mark, so an agent can neither route through a pool it made nor
  *              push an approved pool and trade against its own push. The vault's own fills move the mark;
  *              anything else that moves it is the owner's call (re-approve).
+ *   7 SCORE    optional: with a score signer and a line set, the agent may buy a token (anything but the bond
+ *              token, WETH and ETH) only with a Corbel score for it, signed (EIP-712) and at most SCORE_MAX_AGE old,
+ *              at or above the line. Anyone may bring a signed score in with submitScore.
  * A trade that breaks a rule does not revert: nothing is swapped, the violation is recorded, `slashBps` of
  * the agent's bond goes to the owner, and after `strikesToFreeze` violations the agent is frozen and the
  * rest of its bond goes to the owner too. Output always stays in the vault. Only the owner withdraws.
@@ -39,7 +43,8 @@ contract CorbelMandate is ReentrancyGuard {
         Price,
         Window,
         Bond,
-        Pool
+        Pool,
+        Score
     }
 
     struct Limit {
@@ -95,6 +100,29 @@ contract CorbelMandate is ReentrancyGuard {
     Rules public rules;
     mapping(address => Limit) public limits;
     mapping(address => mapping(uint256 => uint256)) public spentOnDay;
+    /// BUDGET over the whole mandate, per token (0 = no total limit), and what has been spent of it
+    mapping(address => uint256) public maxTotal;
+    mapping(address => uint256) public spentTotal;
+    /// WINDOW: no trade at or after this time (0 = no end date); never more than MAX_TERM after it was set
+    uint256 public endsAt;
+    uint256 public constant MAX_TERM = 90 days;
+    event TotalSet(address indexed token, uint256 maxTotal);
+    /// SCORE: who signs scores (0 = rule off), the line, and the latest signed score per token
+    address public scoreSigner;
+    uint8 public minScore;
+    uint256 public constant SCORE_MAX_AGE = 10 minutes;
+    struct Score {
+        uint8 score;
+        uint64 issuedAt;
+    }
+    mapping(address => Score) public scores;
+    bytes32 public constant SCORE_TYPEHASH = keccak256("Score(address token,uint8 score,uint64 issuedAt)");
+    /// one signature serves every mandate: the domain names the scorer and the chain, not this contract
+    bytes32 public immutable SCORE_DOMAIN;
+    address public immutable weth;
+    event ScoreRuleSet(address signer, uint8 line);
+    event ScoreSet(address indexed token, uint8 score, uint64 issuedAt);
+    event EndSet(uint256 endsAt);
     uint256 public lastTradeAt;
     uint8 public strikes;
 
@@ -118,6 +146,8 @@ contract CorbelMandate is ReentrancyGuard {
         owner = owner_;
         agent = agent_;
         rules = rules_;
+        weth = router_.WETH();
+        SCORE_DOMAIN = keccak256(abi.encode(keccak256("EIP712Domain(string name,string version,uint256 chainId)"), keccak256("Corbel score"), keccak256("1"), block.chainid));
     }
 
     receive() external payable {}
@@ -133,6 +163,40 @@ contract CorbelMandate is ReentrancyGuard {
         require(maxPerTrade <= maxPerDay, "limits");
         limits[token] = Limit(allowed, maxPerTrade, maxPerDay);
         emit LimitSet(token, allowed, maxPerTrade, maxPerDay);
+    }
+
+    /// The most the agent may spend of `token` over the mandate's whole life (0 lifts the total limit).
+    function setTotal(address token, uint256 total) external onlyOwner {
+        maxTotal[token] = total;
+        emit TotalSet(token, total);
+    }
+
+    /// Turns the score rule on (a signer and a line from 1 to 100) or off (signer 0).
+    function setScoreRule(address signer, uint8 line) external onlyOwner {
+        require(signer == address(0) || (line > 0 && line <= 100), "line");
+        scoreSigner = signer;
+        minScore = signer == address(0) ? 0 : line;
+        emit ScoreRuleSet(signer, minScore);
+    }
+
+    /// Anyone brings in a signed score; a newer one replaces an older one for the same token.
+    function submitScore(address token, uint8 score, uint64 issuedAt, uint8 v, bytes32 r, bytes32 s) external {
+        require(scoreSigner != address(0), "no scorer");
+        require(issuedAt <= block.timestamp && score <= 100, "score");
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", SCORE_DOMAIN, keccak256(abi.encode(SCORE_TYPEHASH, token, score, issuedAt))));
+        address who = ecrecover(digest, v, r, s);
+        require(who != address(0) && who == scoreSigner, "signer");
+        if (issuedAt >= scores[token].issuedAt) {
+            scores[token] = Score(score, issuedAt);
+            emit ScoreSet(token, score, issuedAt);
+        }
+    }
+
+    /// The mandate's end date: at most MAX_TERM from now (0 removes it).
+    function setEnd(uint256 at) external onlyOwner {
+        require(at == 0 || (at > block.timestamp && at <= block.timestamp + MAX_TERM), "term");
+        endsAt = at;
+        emit EndSet(at);
     }
 
     function approveHook(address hook, bool approved) external onlyOwner {
@@ -260,7 +324,13 @@ contract CorbelMandate is ReentrancyGuard {
         if (!li.allowed || !limits[tokenOut].allowed) return Rule.Assets;
         if (amountIn == 0 || amountIn > li.maxPerTrade) return Rule.Size;
         if (spentOnDay[tokenIn][block.timestamp / 1 days] + amountIn > li.maxPerDay) return Rule.Budget;
+        if (maxTotal[tokenIn] != 0 && spentTotal[tokenIn] + amountIn > maxTotal[tokenIn]) return Rule.Budget;
+        if (endsAt != 0 && block.timestamp >= endsAt) return Rule.Window;
         if (!_windowOpen()) return Rule.Window;
+        if (minScore != 0 && tokenOut != bondToken && tokenOut != weth && tokenOut != address(0)) {
+            Score memory sc = scores[tokenOut];
+            if (sc.issuedAt == 0 || block.timestamp > sc.issuedAt + SCORE_MAX_AGE || sc.score < minScore) return Rule.Score;
+        }
         return Rule.None;
     }
 
@@ -291,8 +361,16 @@ contract CorbelMandate is ReentrancyGuard {
             return false;
         }
         spentOnDay[tokenIn][block.timestamp / 1 days] += amountIn;
+        spentTotal[tokenIn] += amountIn;
         lastTradeAt = block.timestamp;
         return true;
+    }
+
+    /// A trade that _pre let through but a later rule stopped never happened: take it off the day's and the
+    /// lifetime spend, so a refused trade never uses up the agent's budget.
+    function _undo(address tokenIn, uint256 amountIn) internal {
+        spentOnDay[tokenIn][block.timestamp / 1 days] -= amountIn;
+        spentTotal[tokenIn] -= amountIn;
     }
 
     // ---------- trades ----------
@@ -307,7 +385,7 @@ contract CorbelMandate is ReentrancyGuard {
             address pair = v2Factory.getPair(path[i], path[i + 1]);
             uint256 mark = poolMark[bytes32(uint256(uint160(pair)))];
             if (pair == address(0) || mark == 0) {
-                spentOnDay[tokenIn][block.timestamp / 1 days] -= amountIn;
+                _undo(tokenIn, amountIn);
                 _violate(Rule.Pool, tokenIn, tokenOut, amountIn, memo);
                 return (false, 0);
             }
@@ -317,7 +395,7 @@ contract CorbelMandate is ReentrancyGuard {
         uint256 floor = (q[q.length - 1] * (10_000 - rules.maxSlippageBps)) / 10_000;
         if (minOut < floor) {
             // undo the bookkeeping of _pre: this trade never happens
-            spentOnDay[tokenIn][block.timestamp / 1 days] -= amountIn;
+            _undo(tokenIn, amountIn);
             _violate(Rule.Price, tokenIn, tokenOut, amountIn, memo);
             return (false, 0);
         }
@@ -343,13 +421,13 @@ contract CorbelMandate is ReentrancyGuard {
         bool feeOk = (key.fee & DYNAMIC_FEE) == 0 && key.fee <= MAX_POOL_FEE;
         bool hookOk = key.hooks == address(0) || approvedHooks[key.hooks];
         if (!feeOk || !hookOk) {
-            spentOnDay[tokenIn][block.timestamp / 1 days] -= amountIn;
+            _undo(tokenIn, amountIn);
             _violate(Rule.Price, tokenIn, tokenOut, amountIn, memo);
             return (false, 0);
         }
         uint256 mark = poolMark[v4PoolId(key)];
         if (mark == 0) {
-            spentOnDay[tokenIn][block.timestamp / 1 days] -= amountIn;
+            _undo(tokenIn, amountIn);
             _violate(Rule.Pool, tokenIn, tokenOut, amountIn, memo);
             return (false, 0);
         }

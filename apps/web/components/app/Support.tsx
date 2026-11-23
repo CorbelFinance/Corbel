@@ -7,10 +7,10 @@
  */
 import { useState } from "react";
 import Link from "next/link";
-import { AI_ACCESS, BRAND, TOKEN } from "@corbel/config";
+import { AI_ACCESS, BRAND, TOKEN, FULL_TIER } from "@corbel/config";
 import { cx } from "@corbel/ui";
 
-const light = AI_ACCESS.tiers[0]!, full = AI_ACCESS.tiers.at(-1)!;
+const light = AI_ACCESS.tiers[0]!, full = FULL_TIER;
 const coins = (n: number) => n.toLocaleString("en-US");
 
 const ANSWERS: { q: string; a: string; href?: string; link?: string }[] = [

@@ -158,6 +158,7 @@ function AllCurves({ rows, sel, onPick }: { rows: Row[]; sel: string | null; onP
 
 export function EarnGrid() {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [readAt, setReadAt] = useState<number | null>(null);
   const [sort, setSort] = useState<(typeof SORTS)[number]["id"]>("apr");
   const [pick, setPick] = useState<string | null>(null);
   const [amount, setAmount] = useState(1000);
@@ -167,7 +168,7 @@ export function EarnGrid() {
     const load = () =>
       fetch("/api/earn")
         .then((r) => (r.status === 200 ? r.json() : null))
-        .then((j: { rows?: Row[] } | null) => !off && j?.rows && setRows(j.rows))
+        .then((j: { rows?: Row[]; at?: number } | null) => !off && j?.rows && (setRows(j.rows), setReadAt(j.at ?? null)))
         .catch(() => undefined);
     void load();
     const t = setInterval(load, 60_000);
@@ -203,6 +204,7 @@ export function EarnGrid() {
         tone={best.days!.total > 0 ? "good" : "bad"}
         value={pct(best.days!.total)}
         valueLabel={`kept by an LP in ${best.symbol}/${baseSym(best.base)}, after price moves`}
+        source={readAt ? `pool swaps and reserves, day by day · read ${new Date(readAt).toUTCString().slice(17, 22)} UTC` : undefined}
         facts={[
           ["Pools ahead", `${ahead} of ${withDays}`],
           ["Best average APR", `${(Math.max(...(rows ?? []).filter((r) => !r.doubt).map((r) => r.days?.avgApr ?? 0)) * 100).toFixed(1)}%`],
@@ -219,6 +221,7 @@ export function EarnGrid() {
         tone="info"
         value={`${((day.apr ?? 0) * 100).toFixed(1)}%`}
         valueLabel={`yearly rate in ${day.symbol}/${baseSym(day.base)}, from the last day of swaps`}
+        source={readAt ? `pool swaps of the last day · read ${new Date(readAt).toUTCString().slice(17, 22)} UTC` : undefined}
         facts={[
           ["Pools read", String((rows ?? []).length)],
           ["Deepest", usd(Math.max(...(rows ?? []).map((r) => r.liquidity)))],

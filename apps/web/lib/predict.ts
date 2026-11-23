@@ -16,4 +16,9 @@ export const MANDATES = { factory: "0x5d4e2ac56fa803e2f9a6403853f6f69acc24de04",
 export const MANDATES_POOL = { factory: "0xdea049d3e6df029afe5542d95428ea057f2d4d36", mandate: "0xc5a6CAe3eCDd2d09A6d308543F27a3325acDa94E", block: 119405093,
   refused: "0xffbc4d37dc2f4d9a97fc8d93532b227f7307994b1cff597d758e3dd6f63a66b2", traded: "0xa3d349505cb872a9ac63c9c49c4919a5927a0b1c33c6578f25f31fa4fd49a411",
   revoked: "0xb624936c903bcffe89b0263ffbd981718e6455083575d33f3045dd1b3f7ef4ea" } as const;
+/** The mandate factory v5 (2026-11-23, block 121560370): a lifetime cap per token and an end date at most 90 days
+ *  ahead, and a refused trade no longer counts toward either budget. Its proof mandate: 0.02 USDG traded inside a 0.03
+ *  lifetime cap, then 0.02 more refused as over the cap and slashed. */
+export const MANDATES_V5 = { factory: "0x9e72135ed1e82830eb2705c263033648738637df", mandate: "0x17569593Fcff8e1924F627d11114ff0481808fB7", block: 121560370,
+  traded: "0xa57a2d4d41cae24266570076b2a324a9fa2a2ee84024ad02fd83b36f139d28d5", refused: "0x34e938dc9d9f34e0c629256cd8eea3594bd31e4251d375a17158a32ee6f6b9e7" } as const;
 export const PREDICT_DEPLOY = { tx: "0x12d4ea31e3abf8a4eeb3727697b94556db913f9424311359e16e49a896b79c39", block: 119405539 } as const;

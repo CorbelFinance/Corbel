@@ -2,6 +2,7 @@ import { parseAddress } from "@corbel/data/chain";
 import { creatorDossier, padsOf } from "@corbel/indexer";
 import { LAUNCHPADS } from "@corbel/config";
 import { guardWait } from "@/lib/guard";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,6 +25,7 @@ export async function GET(req: Request) {
       LAUNCHPADS.find((l) => (contract && l.contracts?.includes(contract.toLowerCase())) || (hooks && l.hooks?.includes(hooks.toLowerCase())))?.name ?? null;
     const tokens = d.tokens.map((t) => ({ ...t, pad: padName(t.pad ?? pads.get(t.token)?.pad, pads.get(t.token)?.hooks) }));
     const count = (s: string) => tokens.filter((t) => t.state === s).length;
+    award(req, "creator");
     return Response.json(
       { address: address.toLowerCase(), bulk: d.bulk, total: tokens.length, trading: count("trading"), drained: count("drained"), curve: count("curve"), unknown: count("unknown"), tokens },
       { headers: { "cache-control": "public, max-age=60" } },

@@ -9,11 +9,11 @@
 import { curveLaunches, indexStatus } from "@corbel/indexer";
 import { getClient } from "@corbel/data/chain";
 import { erc20Abi, type PublicClient } from "viem";
+import { blocksPerSecond } from "./blockRate";
 
 export type Curve = { token: string; symbol: string | null; name: string | null; pad: string; creator: string | null; ago: number; sold: number };
 const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO = "0x0000000000000000000000000000000000000000000000000000000000000000";
-const BPS = 4;
 
 type Holder = { holder: string; minted: bigint } | null;
 const G = globalThis as unknown as { __corbelCurve?: { holders: Map<string, Holder>; rows: Curve[]; at: number; busy: boolean } };
@@ -51,6 +51,7 @@ async function refresh() {
   const st = indexStatus();
   if (!c || !st?.high) return;
   const head = st.high;
+  const BPS = await blocksPerSecond();
   const live = curveLaunches(head - 3 * 86_400 * BPS, 4000).filter((r) => !r.pooled).slice(0, 300);
   const rows = await pool(live, 12, async (r): Promise<Curve | null> => {
     const k = r.token.toLowerCase();

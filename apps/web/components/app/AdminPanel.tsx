@@ -23,9 +23,83 @@ type A = {
   earn: { pair: string; symbol: string; liquidity: number; days: number }[];
   stats: Stats | null;
   signups: Signups;
+  rewards: { week: string; signedIn: number; signedInNoPoints: number; wallets: number; people: number; refused: Record<string, number>; problems: { wallet: string; issue: string }[] } | null;
   support: Inbox;
   limits: LimitRow[];
 };
+
+/** Points for a checked bug report or idea: wallet, kind, what was reported. Every grant is logged with the admin. */
+function GrantDesk() {
+  const [kinds, setKinds] = useState<Record<string, { label: string; pts: number }>>({});
+  const [list, setList] = useState<{ wallet: string; kind: string; pts: number; note: string; at: number }[]>([]);
+  const [kind, setKind] = useState("broken");
+  const [wallet, setWallet] = useState("");
+  const [note, setNote] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/admin/grant", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => (setKinds(j.kinds ?? {}), setList(j.grants ?? [])))
+      .catch(() => undefined);
+  }, []);
+  async function send() {
+    setMsg(null);
+    const r = await fetch("/api/admin/grant", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ wallet: wallet.trim(), kind, note }) });
+    const j = (await r.json().catch(() => ({}))) as { error?: string; grants?: typeof list };
+    if (!r.ok) return setMsg(j.error ?? "Not added.");
+    setMsg(`Added ${kinds[kind]?.pts ?? ""} points.`);
+    setList(j.grants ?? []);
+    setWallet("");
+    setNote("");
+  }
+  return (
+    <div className="rounded-xl border border-line p-4">
+      <p className="text-[14px] font-semibold text-text">Report points</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {Object.entries(kinds).map(([k, v]) => (
+          <button key={k} type="button" onClick={() => setKind(k)} className={cx("rounded-full border px-3 py-1 text-[12.5px]", kind === k ? "border-leaf bg-leaf/10 text-leaf" : "border-line text-muted hover:text-text")}>{`${v.label.split(":")[0]} · ${v.pts}`}</button>
+        ))}
+      </div>
+      <form onSubmit={(e) => (e.preventDefault(), void send())} className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]">
+        <input value={wallet} onChange={(e) => setWallet(e.target.value)} placeholder="0x… wallet to credit" className="h-10 rounded-lg border border-line bg-[#0b0b0b] px-3 font-mono text-[13px] text-text outline-none focus:border-leaf" />
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What was reported (kept in the log)" maxLength={300} className="h-10 rounded-lg border border-line bg-[#0b0b0b] px-3 text-[13px] text-text outline-none focus:border-leaf" />
+        <button type="submit" className="h-10 rounded-lg bg-leaf px-4 text-[14px] font-semibold text-[#0b0b0b]">Add points</button>
+      </form>
+      {msg && <p className="mt-2 text-[12.5px] text-muted">{msg}</p>}
+      {list.length > 0 && (
+        <ul className="mt-3 space-y-1 font-mono text-[12px] text-muted">
+          {list.slice(0, 12).map((g) => <li key={g.at}>{`${new Date(g.at).toISOString().slice(0, 16).replace("T", " ")} · ${g.wallet.slice(0, 8)}… · ${g.kind} +${g.pts} · ${g.note}`}</li>)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** The reward week reconciled: who signed in, who earned, what was refused and why, and any wallet whose points went missing. */
+function RewardsAudit({ r }: { r: A["rewards"] }) {
+  if (!r) return <p className="text-[14px] text-muted">The points store is not open.</p>;
+  const cells: [string, number][] = [["Signed in this week", r.signedIn], ["Signed in, no points yet", r.signedInNoPoints], ["Wallets with points", r.wallets], ["People on the board", r.people]];
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
+        {cells.map(([k, v]) => (
+          <div key={k} className="bg-[#0f0f0f] px-4 py-3">
+            <p className="text-[12.5px] text-muted">{k}</p>
+            <p className="font-mono text-[22px] text-text">{v.toLocaleString("en-US")}</p>
+          </div>
+        ))}
+      </div>
+      <p className="font-mono text-[12.5px] text-muted">{`Week ${r.week} · refused: ${Object.entries(r.refused).map(([k, v]) => `${k} ${v}`).join(" · ") || "none"}`}</p>
+      <GrantDesk />
+      <div className={cx("rounded-xl border p-4", r.problems.length ? "border-flesh/50" : "border-leaf/40")}>
+        <p className={cx("text-[14px] font-semibold", r.problems.length ? "text-flesh" : "text-leaf")}>{r.problems.length ? `${r.problems.length} wallets need a look` : "No lost points: every counted action is stored and every earner is on the board."}</p>
+        <ul className="mt-2 space-y-1 font-mono text-[12.5px] text-text">
+          {r.problems.map((p) => <li key={p.wallet + p.issue}>{`${p.wallet} · ${p.issue}`}</li>)}
+        </ul>
+      </div>
+    </div>
+  );
+}
 
 const px = (v: number | null) => (v == null ? "—" : v >= 1 ? `$${v.toLocaleString("en", { maximumFractionDigits: 2 })}` : `$${v.toPrecision(3)}`);
 const ago = (t: number) => {
@@ -39,7 +113,7 @@ export function AdminPanel() {
   const [state, setState] = useState<"loading" | "signin" | "denied" | "ok">("loading");
   const [err, setErr] = useState<string | null>(null);
   const [filter, setFilter] = useState<"doubt" | "all">("doubt");
-  const [tab, setTab] = useState<"people" | "signins" | "support" | "limits" | "checks">("people");
+  const [tab, setTab] = useState<"people" | "signins" | "rewards" | "support" | "limits" | "checks">("people");
 
   const load = useCallback(async () => {
     const r = await fetch("/api/admin", { cache: "no-store" }).catch(() => null);
@@ -92,7 +166,7 @@ export function AdminPanel() {
 
   const tabs = (
     <div role="tablist" aria-label="Owner panel" className="flex w-fit gap-1 rounded-xl border border-line p-[3px]">
-      {([["people", "People"], ["signins", "Sign-ins"], ["support", "Support"], ["limits", "Limits"], ["checks", "Checks"]] as const).map(([id, label]) => (
+      {([["people", "People"], ["signins", "Sign-ins"], ["rewards", "Rewards"], ["support", "Support"], ["limits", "Limits"], ["checks", "Checks"]] as const).map(([id, label]) => (
         <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={cx("rounded-lg px-4 py-1.5 text-[14px]", tab === id ? "bg-[#202020] font-semibold text-text" : "text-muted hover:text-text")}>
           {label}
           {id === "support" && d.support.open > 0 && <span className="ml-2 rounded-full bg-leaf/20 px-1.5 text-[12px] text-leaf">{d.support.open}</span>}
@@ -105,7 +179,7 @@ export function AdminPanel() {
     return (
       <div className="space-y-4">
         {tabs}
-        {tab === "people" ? <AdminPeople s={d.stats} /> : tab === "signins" ? <AdminSignups s={d.signups} /> : tab === "support" ? <AdminInbox s={d.support} onChanged={() => void load()} /> : <AdminLimits rows={d.limits} onSaved={() => void load()} />}
+        {tab === "people" ? <AdminPeople s={d.stats} /> : tab === "signins" ? <AdminSignups s={d.signups} /> : tab === "rewards" ? <RewardsAudit r={d.rewards} /> : tab === "support" ? <AdminInbox s={d.support} onChanged={() => void load()} /> : <AdminLimits rows={d.limits} onSaved={() => void load()} />}
       </div>
     );
 

@@ -1,3 +1,5 @@
+import { CopycatBoard } from "./CopycatBoard";
+import { AddressCheck } from "./AddressCheck";
 import Link from "next/link";
 import type { Layer, Tab } from "@corbel/config";
 import { AgentGuard } from "./AgentGuard";
@@ -16,6 +18,11 @@ import { MandateLab } from "./MandateLab";
 import { StockDesk } from "./StockDesk";
 import { AccountPanel } from "./AccountPanel";
 import { DecisionLog } from "./DecisionLog";
+import { AgentVersus } from "./AgentVersus";
+import { OrdersEscrow } from "./OrdersEscrow";
+import { LaunchDesk } from "./LaunchDesk";
+import { AgentRegistry } from "./AgentRegistry";
+import { FairLaunch } from "./FairLaunch";
 import { Terminal } from "./Terminal";
 import { StockMarket } from "./StockMarket";
 import { EarnPools } from "./EarnPools";
@@ -75,6 +82,7 @@ export function TabWidget({ kind, layer }: { kind: NonNullable<Tab["widget"]>; l
     case "order-types":
       return (
         <div className="space-y-6">
+          <OrdersEscrow />
           <OrdersDesk />
           <OrderPlanner />
           <OrderTypes />
@@ -157,6 +165,7 @@ export function TabWidget({ kind, layer }: { kind: NonNullable<Tab["widget"]>; l
           <AlphaBoard />
           <PadBoard />
           <LaunchOutcomes />
+          <CopycatBoard />
           <Radar />
         </div>
       );
@@ -187,6 +196,7 @@ export function TabWidget({ kind, layer }: { kind: NonNullable<Tab["widget"]>; l
       return (
         <div className="space-y-4">
           <MandateVerdict page="hub" />
+          <AgentRegistry />
           <AgentHub />
         </div>
       );
@@ -201,6 +211,17 @@ export function TabWidget({ kind, layer }: { kind: NonNullable<Tab["widget"]>; l
       );
     case "loan-calc":
       return <LoanCalc />;
+    case "fair-launch":
+      return (
+        <>
+          <LaunchDesk />
+          <FairLaunch />
+        </>
+      );
+    case "address-check":
+      return <AddressCheck />;
+    case "agent-versus":
+      return <AgentVersus />;
     case "decision-log":
       return (
         <div className="space-y-4">

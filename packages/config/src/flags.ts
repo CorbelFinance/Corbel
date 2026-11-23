@@ -5,7 +5,7 @@ export type LayerId = "account" | "trust" | "stocks" | "trade" | "agents" | "lau
 /** Live: works on mainnet today (reads, or swaps the user signs, or a deployed contract). Preview: shown, not open
  * for funds. Closed or soon: not built. */
 export const FLAGS: Record<LayerId | "gapFund" | "openData", LayerStatus> = {
-  account: "preview",
+  account: "live",
   trust: "live",
   stocks: "live",
   trade: "live",
@@ -15,6 +15,12 @@ export const FLAGS: Record<LayerId | "gapFund" | "openData", LayerStatus> = {
   gapFund: "closed",
   openData: "closed",
 };
+
+/**
+ * Tools that are built but held back from the public site: hidden from menus, tabs, the points
+ * table and the alerts, their API answers 404 and their roadmap items read Building. Set one to false to ship it.
+ */
+export const HELD = { fair: true, xray: true, preview: true, drain: true } as const;
 
 export const STATUS_LABEL: Record<LayerStatus, string> = {
   live: "Live",

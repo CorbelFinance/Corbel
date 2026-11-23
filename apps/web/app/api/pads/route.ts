@@ -1,6 +1,7 @@
 import { DIRECT_PAD, LAUNCHPADS, launchpadOf } from "@corbel/config";
 import { curveLaunches, indexStatus, launchesSince } from "@corbel/indexer";
 import { guardWait } from "@/lib/guard";
+import { blocksPerSecond } from "@/lib/blockRate";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -10,7 +11,6 @@ export const runtime = "nodejs";
  * last three days, newest first: name, symbol, age, and whether the pool is already drained. Grouped from our own
  * index by each pool's hook and creating contract. Cached 30 seconds.
  */
-const BPS = 4; // blocks per second
 const KEEP = 40; // newest tokens kept per launchpad
 type Tok = { token: string; symbol: string | null; name: string | null; ago: number; dead: 0 | 1 | null; base: string | null; kind: string; lookalike?: boolean; stage: "curve" | "pool"; creator?: string | null };
 /** Tickers of the chain's money; a new token that takes one of them is a lookalike, whatever it claims. */
@@ -26,6 +26,8 @@ export async function GET(req: Request) {
     const st = indexStatus();
     if (!st?.high) return Response.json({ error: "The index is not available yet." }, { status: 503 });
     const head = st.high;
+    // blocks become seconds at the rate measured from the chain, not a fixed guess
+    const BPS = await blocksPerSecond();
     const rows = launchesSince(head - 3 * 86_400 * BPS, 12_000) ?? [];
     const pads = new Map<string, Pad>();
     const seen = new Set<string>();

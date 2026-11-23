@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND, FLAGS, LAYERS, NAV } from "@corbel/config";
+import { BRAND, FLAGS, LAYERS, LAYER_TONE, NAV, inAppOrder } from "@corbel/config";
 import { StatusChip } from "@corbel/ui";
 import { NetStatus } from "./NetStatus";
 import { MenuCloser } from "./MenuCloser";
@@ -46,7 +46,7 @@ export function Header() {
                 </div>
                 <ul className="grid grid-cols-4 gap-3">
                   <li>
-                    <a href="/app/overview" className="card group/c relative flex h-full flex-col border border-line bg-surface p-4 transition-colors hover:border-leaf/50">
+                    <a href="/app/overview" style={{ ["--leaf" as string]: "#42ee8f" }} className="card group/c relative flex h-full flex-col border border-[#42ee8f]/35 bg-surface p-4 transition-colors hover:border-[#42ee8f]">
                       <span aria-hidden className="corner-ticks" />
                       <span className="flex items-center justify-between font-mono text-[12px] uppercase tracking-[0.08em] text-muted">
                         [000]
@@ -64,20 +64,20 @@ export function Header() {
                       </span>
                     </a>
                   </li>
-                  {LAYERS.map((l) => (
-                    <li key={l.id} style={l.id === "agents" ? ({ "--leaf": "#9b86e4", "--ui": "#9b86e4" } as React.CSSProperties) : l.id === "trade" ? ({ "--leaf": "#3ddc84", "--ui": "#3ddc84" } as React.CSSProperties) : undefined}>
+                  {inAppOrder(LAYERS).map((l, n) => (
+                    <li key={l.id} style={LAYER_TONE[l.id] ? ({ "--leaf": LAYER_TONE[l.id], "--ui": LAYER_TONE[l.id] } as React.CSSProperties) : undefined}>
                       <a
                         href={`/app/${l.id}`}
-                        className={`card group/c relative flex h-full flex-col border bg-surface p-4 transition-colors hover:border-leaf/50 ${l.id === "agents" ? "border-[#9b86e4]/40 hover:border-[#9b86e4]" : "border-line"}`}
+                        className="card group/c relative flex h-full flex-col border border-[color-mix(in_srgb,var(--leaf)_35%,#242424)] bg-surface p-4 transition-colors hover:border-[var(--leaf)]"
                       >
                         <span aria-hidden className="corner-ticks" />
                         <span className="flex items-center justify-between font-mono text-[12px] uppercase tracking-[0.08em] text-muted">
-                          [{l.num}]
+                          [{String(n + 1).padStart(3, "0")}]
                           <span aria-hidden className="text-leaf transition-transform group-hover/c:-translate-y-0.5 group-hover/c:translate-x-0.5">
                             ↗
                           </span>
                         </span>
-                        <span className={`mt-3 font-display text-3xl tracking-tight ${l.id === "agents" ? "text-[#9b86e4]" : l.id === "trust" ? "text-leaf" : l.id === "trade" ? "text-[#3ddc84]" : "text-text"}`}>{l.name}</span>
+                        <span className="mt-3 font-display text-3xl tracking-tight" style={{ color: LAYER_TONE[l.id] }}>{l.name}</span>
                         <span className="dots mt-4 flex h-24 items-center justify-center border border-line/60 bg-bg">
                           <LayerLoop id={l.id} />
                         </span>
@@ -89,7 +89,7 @@ export function Header() {
                     </li>
                   ))}
                   <li>
-                    <a href="/app/ai/studio" className="card group/c relative flex h-full flex-col border border-[#ff9a5c]/40 bg-surface p-4 transition-colors hover:border-[#ff9a5c]">
+                    <a href="/app/ai/studio" style={{ ["--leaf" as string]: "#ff9a5c", ["--ui" as string]: "#ff9a5c" }} className="card group/c relative flex h-full flex-col border border-[#ff9a5c]/40 bg-surface p-4 transition-colors hover:border-[#ff9a5c]">
                       <span aria-hidden className="corner-ticks" />
                       <span className="flex items-center justify-between font-mono text-[12px] uppercase tracking-[0.08em] text-muted">
                         [006]
@@ -103,7 +103,7 @@ export function Header() {
                       </span>
                       <span className="mt-3 text-xs leading-snug text-muted">AI models and GPUs at live prices, paid from one balance.</span>
                       <span className="mt-3">
-                        <StatusChip status="preview" />
+                        <StatusChip status="live" />
                       </span>
                     </a>
                   </li>
@@ -151,12 +151,12 @@ function MobileMenu() {
       <div className="fixed inset-x-0 top-16 h-[calc(100dvh/var(--vz)-4rem)] overflow-y-auto border-t border-line bg-bg px-4 py-6">
         <p className="font-mono text-[12px] uppercase tracking-[0.08em] text-muted">Layers</p>
         <ul className="mt-3 divide-y divide-line border-y border-line">
-          {LAYERS.map((l) => (
+          {inAppOrder(LAYERS).map((l, n) => (
             <li key={l.id}>
               <a href={`/app/${l.id}`} className="flex items-center justify-between py-3.5">
                 <span className="flex items-baseline gap-3">
-                  <span className="font-mono text-[12px] text-muted">[{l.num}]</span>
-                  <span className={`text-lg ${l.id === "agents" ? "text-[#9b86e4]" : l.id === "trust" ? "text-leaf" : l.id === "trade" ? "text-[#3ddc84]" : ""}`}>{l.name}</span>
+                  <span className="font-mono text-[12px] text-muted">[{String(n + 1).padStart(3, "0")}]</span>
+                  <span className="text-lg" style={{ color: LAYER_TONE[l.id] }}>{l.name}</span>
                 </span>
                 <StatusChip status={FLAGS[l.id]} />
               </a>

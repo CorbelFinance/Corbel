@@ -20,7 +20,8 @@ export async function GET(req: Request) {
   if ("blocked" in g) return g.blocked;
   try {
     const s = session(req);
-    return Response.json({ signedIn: !!s, holder: !!tierOf(s?.address), need: light.minCoins, holdDays: AI_ACCESS.holdDays, limits: API_KEYS, keys: s ? listKeys(s.address) : [] }, { headers: noStore });
+    const t = tierOf(s?.address);
+    return Response.json({ signedIn: !!s, holder: !!t, tier: t?.name ?? null, need: light.minCoins, holdDays: AI_ACCESS.holdDays, limits: { ...API_KEYS, boost: API_KEYS.boost * (t?.apiBoost ?? 1) }, keys: s ? listKeys(s.address) : [] }, { headers: noStore });
   } finally {
     g.release();
   }

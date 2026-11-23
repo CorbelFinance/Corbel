@@ -156,6 +156,39 @@ export async function ethUsd(client: PublicClient): Promise<number> {
   return Number(usdg) / 1e6 / (Number(weth) / 1e18);
 }
 
+/**
+ * A token's v4 pools ranked by real depth in dollars: the base side (ETH, WETH or USDG) that each pool's in-range
+ * liquidity holds now. Every pool is measured, in batches, up to `cap`: a token can have dozens of look-alike pools,
+ * all newer than its real one, and picking by age or by "no hook" would land on a copy (2026-11-23: CORBEL was judged
+ * and charted on a copy pool for exactly that reason). Pools that can't be read rank last, newest first among them.
+ */
+export async function rankV4ByDepth<T extends { id: string; key: { currency0: string; currency1: string }; block: number }>(
+  client: PublicClient,
+  token: string,
+  pools: T[],
+  cap = 300,
+): Promise<{ pool: T; usd: number }[]> {
+  const lower = token.toLowerCase();
+  const usd = await ethUsd(client).catch(() => 0);
+  const list = pools.slice(0, cap);
+  const out: { pool: T; usd: number }[] = [];
+  for (let i = 0; i < list.length; i += 25) {
+    const part = await Promise.all(
+      list.slice(i, i + 25).map(async (p) => {
+        const st = await v4State(client, p.id as Hex).catch(() => null);
+        if (!st) return { pool: p, usd: -1 };
+        const s = Number(st.sqrt) / 2 ** 96, L = Number(st.liquidity);
+        const baseIs0 = p.key.currency1.toLowerCase() === lower;
+        const base = (baseIs0 ? p.key.currency0 : p.key.currency1).toLowerCase();
+        const raw = baseIs0 ? L / s : L * s;
+        return { pool: p, usd: base === RH.USDG.toLowerCase() ? raw / 1e6 : (raw / 1e18) * usd };
+      }),
+    );
+    out.push(...part);
+  }
+  return out.sort((a, b) => b.usd - a.usd || b.pool.block - a.pool.block);
+}
+
 /** The chain's base assets by name: a symbol read that fails (a busy node) must never show them as "?". */
 const KNOWN_META: Record<string, { symbol: string; name: string }> = {
   "0x0000000000000000000000000000000000000000": { symbol: "ETH", name: "Ether" },
@@ -205,7 +238,7 @@ export async function readMarket(client: PublicClient, tokenIn: Address, v4: V4R
   const lower = token.toLowerCase();
   const [m, usd, headBig] = await Promise.all([meta(client, token), ethUsd(client).catch(() => 0), client.getBlockNumber()]);
 
-  // the pool: the deepest V2 pair against WETH or USDG, else the newest unhooked v4 pool against ETH, WETH or USDG
+  // the pool: the deepest V2 pair against WETH or USDG, else the deepest v4 pool against ETH, WETH or USDG
   const v2 = await findV2(client, token).catch(() => []);
   const toUsd = (b: { base: string; baseReserve: bigint }) => (b.base === "USDG" ? Number(b.baseReserve) / 1e6 : (Number(b.baseReserve) / 1e18) * usd);
   const bestV2 = v2.sort((a, b) => toUsd(b) - toUsd(a))[0];
@@ -213,7 +246,8 @@ export async function readMarket(client: PublicClient, tokenIn: Address, v4: V4R
     const other = p.key.currency0.toLowerCase() === lower ? p.key.currency1.toLowerCase() : p.key.currency0.toLowerCase();
     return BASES[other] !== undefined;
   });
-  const bestV4 = v4ok.find((p) => /^0x0{40}$/i.test(p.key.hooks)) ?? v4ok[0];
+  // the deepest v4 pool in dollars, hooked or not: a launchpad pool carries a hook, and copies are often unhooked
+  const bestV4 = v4ok.length > 1 ? (await rankV4ByDepth(client, token, v4ok))[0]?.pool : v4ok[0];
   if (!bestV2 && !bestV4) return null;
 
   const head = Number(headBig);

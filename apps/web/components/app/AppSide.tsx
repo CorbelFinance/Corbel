@@ -6,6 +6,7 @@
  */
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { blockTone, PORTFOLIO_TONE } from "@corbel/config";
 import { cx } from "@corbel/ui";
 import { NAV_GROUPS } from "./AppNav";
 import { NavIcon } from "./NavIcon";
@@ -18,8 +19,19 @@ const WIDTH_KEY = "corbel.side.width";
 const MIN_W = 68, MAX_W = 380, DEF_W = 240, COMPACT = 150;
 const applyWidth = (w: number) => document.documentElement.style.setProperty("--side", `${w}px`);
 
-/** Each section speaks in its own colour: Check mint, Swap green, Agents violet, AI orange. */
-const SECTION_TONE: Record<string, string> = { check: "text-leaf", trade: "text-[var(--swp)]", agents: "text-[var(--agt)]", compute: "text-[var(--ai)]" };
+/** Each section speaks in the colour of its roadmap block; Overview wears all of them mixed (the tone-mix gradient). */
+const MIX_STOPS = ["trade", "check", "predict", "agents", "stocks", "wallet", "compute", "earn"].map((id) => blockTone(id)!);
+export function ToneMixDefs() {
+  return (
+    <svg aria-hidden width="0" height="0" className="absolute">
+      <defs>
+        <linearGradient id="tone-mix" x1="0" y1="0" x2="1" y2="1">
+          {MIX_STOPS.map((c, i) => <stop key={c + i} offset={`${(i / (MIX_STOPS.length - 1)) * 100}%`} stopColor={c} />)}
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
 
 export function AppSide() {
   const path = usePathname() ?? "";
@@ -92,8 +104,9 @@ export function AppSide() {
       </a>
       <nav aria-label="App" className={cx("min-h-0 flex-1 overflow-y-auto pb-4", compact ? "px-2" : "px-3")}>
         <a href="/app/overview" title="Overview" aria-current={path.startsWith("/app/overview") ? "page" : undefined} className={cx("mt-1 flex items-center gap-3 rounded-lg py-2", compact ? "justify-center px-0" : "px-2", path.startsWith("/app/overview") ? "bg-[#181818] text-text" : "text-muted hover:bg-[#131313] hover:text-text")}>
-          <NavIcon id="overview" className={cx("h-[22px] w-[22px] shrink-0", path.startsWith("/app/overview") && "text-leaf")} />
-          {!compact && <span className="text-[15px] font-semibold">Overview</span>}
+          <ToneMixDefs />
+          <NavIcon id="overview" className="h-[22px] w-[22px] shrink-0 text-text" />
+          {!compact && <span className="text-[15px] font-semibold text-text">Overview</span>}
         </a>
         {NAV_GROUPS.map((g) => {
           const here = g.match.some((m) => path.startsWith(m)) || g.items.some((i) => path.startsWith(i.href));
@@ -101,7 +114,7 @@ export function AppSide() {
           if (compact) {
             const first = g.items.find((i) => i.href.startsWith("/app"));
             return (
-              <a key={g.id} href={g.soon || !first ? undefined : first.href} title={g.soon ? `${g.label} · soon` : g.label} aria-label={g.label} className={cx("mt-1 grid h-11 place-items-center rounded-lg", g.soon ? "text-muted/50" : SECTION_TONE[g.id] ?? (here ? "text-leaf" : "text-muted hover:text-text"), here ? "bg-[#181818]" : "hover:bg-[#131313]")}>
+              <a key={g.id} href={g.soon || !first ? undefined : first.href} title={g.soon ? `${g.label} · soon` : g.label} aria-label={g.label} style={{ color: blockTone(g.id) }} className={cx("mt-1 grid h-11 place-items-center rounded-lg", g.soon && "opacity-50", here ? "bg-[#181818]" : "hover:bg-[#131313]")}>
                 <NavIcon id={g.id} className="h-[22px] w-[22px]" />
               </a>
             );
@@ -109,21 +122,17 @@ export function AppSide() {
           if (g.soon)
             return (
               <div key={g.id} className="mt-2 flex cursor-default items-center gap-3 rounded-lg px-2 py-2 first:mt-1" title={`${g.label} opens soon`}>
-                <NavIcon id={g.id} className="h-[22px] w-[22px] shrink-0 text-muted/60" />
+                <NavIcon id={g.id} className="h-[22px] w-[22px] shrink-0 opacity-60" style={{ color: blockTone(g.id) }} />
                 <span className="flex-1 text-[15px] font-semibold text-muted">{g.label}</span>
                 <span className="rounded-full border border-line px-1.5 text-[12px] text-muted">soon</span>
               </div>
             );
-          const ai = g.id === "compute";
-          // Check wears the mint everywhere, as AI wears orange
-          const chk = g.id === "check";
-          const agt = g.id === "agents";
-          const swp = g.id === "trade";
+          const tone = blockTone(g.id);
           return (
-          <div key={g.id} className={cx("mt-2 first:mt-1", ai && "[--leaf:var(--ai)]", agt && "[--leaf:var(--agt)]", swp && "[--leaf:var(--swp)]")}>
+          <div key={g.id} className="mt-2 first:mt-1" style={tone ? ({ "--leaf": tone } as React.CSSProperties) : undefined}>
             <button type="button" aria-expanded={open} onClick={() => toggle(g.id)} className="group flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-[#131313]">
-              <NavIcon id={g.id} className={cx("h-[22px] w-[22px] shrink-0", ai ? "text-[var(--ai)]" : agt ? "text-[var(--agt)]" : swp ? "text-[var(--swp)]" : chk || here ? "text-leaf" : "text-muted group-hover:text-text")} />
-              <span className={cx("flex-1 text-[15px] font-semibold", ai ? "text-[var(--ai)]" : agt ? "text-[var(--agt)]" : swp ? "text-[var(--swp)]" : chk ? "text-leaf" : here ? "text-text" : "text-muted group-hover:text-text")}>{g.label}</span>
+              <NavIcon id={g.id} className="h-[22px] w-[22px] shrink-0" style={{ color: tone }} />
+              <span className="flex-1 text-[15px] font-semibold" style={{ color: tone }}>{g.label}</span>
               <span aria-hidden className={cx("text-[12px] text-muted transition-transform", open ? "rotate-0" : "-rotate-90")}>
                 ▾
               </span>
@@ -150,9 +159,9 @@ export function AppSide() {
           );
         })}
         <div className="mt-4">
-          <a href="/app/portfolio" title="Portfolio" className={cx("flex items-center gap-2 rounded-lg py-1.5 text-[14px]", compact ? "justify-center px-0" : "px-2.5", path.startsWith("/app/portfolio") ? "bg-[#181818] text-text" : "text-muted hover:text-text")}>
-            <NavIcon id="portfolio" className="h-[22px] w-[22px] text-muted" />
-            {!compact && "Portfolio"}
+          <a href="/app/portfolio" title="Portfolio" className={cx("flex items-center gap-2 rounded-lg py-1.5 text-[14px]", compact ? "justify-center px-0" : "px-2.5", path.startsWith("/app/portfolio") ? "bg-[#181818]" : "hover:bg-[#131313]")} style={{ color: PORTFOLIO_TONE }}>
+            <NavIcon id="portfolio" className="h-[22px] w-[22px]" />
+            {!compact && <span className="text-[15px] font-semibold">Portfolio</span>}
           </a>
         </div>
       </nav>

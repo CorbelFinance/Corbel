@@ -60,6 +60,8 @@ export function Approvals() {
       // send() waits for the block and throws when the revoke reverts
       const hash = await send(p, linked!.address, a.token, data, "The revoke");
       setTx((x) => ({ ...x, [k]: { state: "done", hash } }));
+      // reward points: the server checks the revoke on chain before counting it
+      void fetch("/api/rewards/revoke", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tx: hash }) }).catch(() => undefined);
       if (addr) void load(addr, true);
     } catch (e) {
       setTx((x) => ({ ...x, [k]: { state: "error", msg: niceError(e, "The wallet did not sign.") } }));
@@ -116,6 +118,7 @@ export function Approvals() {
           tone={danger ? "bad" : caution ? "caution" : "good"}
           value={danger + caution}
           valueLabel={`risky of ${n} live approvals`}
+          source={`chain · from block ${Number(r.fromBlock).toLocaleString("en-US")} to ${Number(r.block).toLocaleString("en-US")}`}
           facts={[
             ["Danger", String(danger)],
             ["Check", String(caution)],

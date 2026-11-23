@@ -7,6 +7,7 @@
  */
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { blockTone, HELD, PORTFOLIO_TONE } from "@corbel/config";
 import { cx } from "@corbel/ui";
 import { NavIcon } from "./NavIcon";
 
@@ -31,15 +32,25 @@ const GROUPS: Group[] = [
   {
     id: "check",
     label: "Check",
-    match: ["/app/trust", "/app/stocks"],
+    match: ["/app/trust"],
     items: [
       { href: "/app/trust/check", title: "Token check", text: "Seven checks before you buy" },
       { href: "/app/trust/radar", title: "Radar", text: "New pools, newest first" },
       { href: "/app/trust/launches", title: "Launch analytics", text: "Who launches, where, what survives" },
       { href: "/app/trust/creator", title: "Creator dossier", text: "Every token one wallet launched" },
-      { href: "/app/stocks/market", title: "Stock market", text: "Map, breadth, venues and pools" },
-      { href: "/app/stocks/desk", title: "Stock tokens", text: "Issuer code or a lookalike", tag: "soon" },
+      { href: "/app/trust/address", title: "Address", text: "Who an address is and what it moved" },
+      ...(HELD.fair ? [] : [{ href: "/app/trust/fair", title: "Fair launch", text: "What a launch shows its buyers" }]),
       { href: "/app/trust/api", title: "API", text: "The same checks as a GET request" },
+    ],
+  },
+  {
+    id: "stocks",
+    label: "Stocks",
+    match: ["/app/stocks"],
+    items: [
+      { href: "/app/stocks/market", title: "Stock market", text: "Map, breadth, venues and pools" },
+      { href: "/app/stocks/loan", title: "Loan calculator", text: "What a loan against a stock token can take" },
+      { href: "/app/stocks/desk", title: "Stock tokens", text: "Issuer code or a lookalike", tag: "soon" },
     ],
   },
   {
@@ -59,7 +70,6 @@ const GROUPS: Group[] = [
     items: [
       { href: "/app/account/pools", title: "Pool fees", text: "What LPs earned last day, and your share" },
       { href: "/app/account/dashboard", title: "Account", text: "One balance; read any address" },
-      { href: "/app/stocks/loan", title: "Loan calculator", text: "What a loan against a stock token can take" },
       { href: "/app/account/transparency", title: "Transparency", text: "Contracts and where funds sit" },
       { href: "/docs/earn", title: "How fees are counted", text: "Fee yield, impermanent loss, net" },
     ],
@@ -82,6 +92,7 @@ const GROUPS: Group[] = [
       { href: "/app/agents/strategies", title: "Mandate builder", text: "Draft rules and see the worst day" },
       { href: "/app/agents/guard", title: "Guard", text: "Rules every agent trade must pass" },
       { href: "/app/agents/break", title: "Break it", text: "Attack a real mandate on live pools" },
+      { href: "/app/agents/versus", title: "Versus", text: "Two agents on one market" },
       { href: "/app/agents/limits", title: "Limits", text: "What an agent can and can't change" },
       { href: "/app/agents/log", title: "Decision log", text: "What the contract decided, block by block" },
       { href: "/docs/mcp", title: "Agent tools (MCP)", text: "Checks, quotes and the radar for any agent" },
@@ -106,6 +117,8 @@ const GROUPS: Group[] = [
     match: ["/app/wallet"],
     items: [
       { href: "/app/wallet/approvals", title: "Approvals", text: "Who can move your tokens" },
+      ...(HELD.xray ? [] : [{ href: "/app/wallet/xray", title: "X-ray", text: "What selling it all really pays" }]),
+      ...(HELD.preview ? [] : [{ href: "/app/wallet/preview", title: "Before you sign", text: "What a transaction would move" }]),
       { href: "/app/wallet/exposure", title: "Exposure", text: "How others see this wallet" },
       { href: "/app/wallet/stress", title: "Stress test", text: "Your holdings after a fall" },
       { href: "/app/wallet/paper", title: "Paper account", text: "Trade pretend USDG at real fills" },
@@ -161,7 +174,8 @@ export function AppNav() {
                 aria-expanded={isOpen}
                 aria-controls={`nav-${g.id}`}
                 onClick={() => setOpen(isOpen ? null : g.id)}
-                className={cx("my-1.5 flex h-9 items-center gap-1 rounded-xl px-2 text-[13px] font-medium transition-colors lg:gap-1.5 lg:px-3.5 lg:text-[14px]", g.id === "compute" ? "text-[var(--ai)]" : g.id === "agents" ? "text-[var(--agt)]" : g.id === "trade" ? "text-[var(--swp)]" : g.id === "check" ? "text-leaf" : active ? "bg-[#202020] text-text" : "text-muted hover:text-text", g.id === "compute" && active && "bg-[#2a1a10]", g.id !== "compute" && active && "bg-[#202020]")}
+                style={{ color: blockTone(g.id) }}
+                className={cx("my-1.5 flex h-9 items-center gap-1 rounded-xl px-2 text-[13px] font-medium transition-colors lg:gap-1.5 lg:px-3.5 lg:text-[14px]", !blockTone(g.id) && (active ? "text-text" : "text-muted hover:text-text"), g.id === "compute" && active && "bg-[#2a1a10]", g.id !== "compute" && active && "bg-[#202020]")}
               >
                 {g.label}
                 <span aria-hidden className={cx("text-[12px] transition-transform", isOpen && "rotate-180")}>
@@ -198,7 +212,7 @@ export function AppNav() {
           );
         })}
         <li className="shrink-0">
-          <a href="/app/portfolio" aria-current={path.startsWith("/app/portfolio") ? "page" : undefined} className={cx("my-1.5 flex h-9 items-center rounded-xl px-2 text-[13px] font-medium transition-colors lg:px-3.5 lg:text-[14px]", path.startsWith("/app/portfolio") ? "bg-[#202020] text-text" : "text-muted hover:text-text")}>
+          <a href="/app/portfolio" aria-current={path.startsWith("/app/portfolio") ? "page" : undefined} className={cx("my-1.5 flex h-9 items-center rounded-xl px-2 text-[13px] font-medium transition-colors lg:px-3.5 lg:text-[14px]", path.startsWith("/app/portfolio") && "bg-[#202020]")} style={{ color: PORTFOLIO_TONE }}>
             Portfolio
           </a>
         </li>

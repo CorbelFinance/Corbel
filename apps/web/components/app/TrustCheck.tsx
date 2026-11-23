@@ -14,6 +14,8 @@ import { cx } from "@corbel/ui";
 import { CopyButton } from "../docs/CopyButton";
 import { WatchButton } from "./WatchButton";
 import { short, Verdict } from "./kit";
+import { LaunchWaivers, type WaiversIn } from "./LaunchWaivers";
+import { BuyerRetention } from "./BuyerRetention";
 import { briefOf, score, shareLine, type Check as ScoreCheck, type HoldersIn, type MarketIn } from "./score";
 import { useHolders } from "./HoldersPanel";
 import { ScanOrb } from "./TokenPulse";
@@ -271,6 +273,7 @@ export function TrustCheck() {
                   tone={notToken || exit?.result === "fail" || fails ? "bad" : warns ? "caution" : "good"}
                   value={notToken ? "Not a token" : sc ? <>{sc.total}<span className="text-[0.45em] text-muted">/90</span></> : `${passed}/${report.checks.length}`}
                   valueLabel={notToken ? "no score: nothing here can be traded" : sc ? `Corbel score, ${sc.total} of a possible 90 · ${sc.tag}` : "checks passed"}
+                  source={report.meta?.block ? `chain · block ${Number(report.meta.block).toLocaleString("en-US")} · read in ${(report.meta.ms / 1000).toFixed(1)} s` : undefined}
                   facts={[
                     ["Checks passed", `${passed} of ${report.checks.length}`],
                     ["Exit now", by("exit")?.metric ?? "—"],
@@ -400,6 +403,8 @@ export function TrustCheck() {
                 </div>
               </aside>
             </div>
+            {!report.example && (report as { waivers?: WaiversIn }).waivers && <LaunchWaivers w={(report as { waivers?: WaiversIn }).waivers!} />}
+            {!report.example && !notToken && <BuyerRetention token={report.token} />}
             {!report.example && <ProjectResearch token={report.token} />}
             {!report.example && <RealityCheck token={report.token} />}
           </>

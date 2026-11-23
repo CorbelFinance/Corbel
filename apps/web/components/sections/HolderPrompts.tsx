@@ -3,14 +3,14 @@
  * from farming many wallets. Every holder gets the text models; the light tier gets selected fast models in standard
  * quality; top holders get all 185 models at full quality. Live since the token launch.
  */
-import { AI_ACCESS, FULL_MODELS, type AiTier } from "@corbel/config";
+import { AI_ACCESS, FULL_MODELS, hasFull, type AiTier } from "@corbel/config";
 
 const fmt = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toLocaleString("en", { maximumFractionDigits: 1 })}M` : n >= 1_000 ? `${(n / 1_000).toLocaleString("en", { maximumFractionDigits: 1 })}K` : String(n));
 const cell = (n: number, unit = "") => (n ? `${n}${unit}` : "—");
 const SHOWN = AI_ACCESS.tiers;
 const ROWS: [string, (t: AiTier) => string][] = [
-  ["Models", (t) => (t.id === "full" ? `All ${FULL_MODELS}` : "Selected fast models")],
-  ["Quality", (t) => (t.id === "full" ? "Highest: sharpest pictures, full-HD video" : "Standard: lighter pictures and video")],
+  ["Models", (t) => (hasFull(t) ? `All ${FULL_MODELS}` : t.id === "plus" ? "More models" : "Selected fast models")],
+  ["Quality", (t) => (hasFull(t) ? "Highest" : "Standard")],
   ["Text messages", (t) => `${t.text} a day`],
   ["Per message", (t) => `${t.chars.toLocaleString("en")} characters`],
   ["Pictures", (t) => cell(t.image, " a day")],
@@ -18,6 +18,11 @@ const ROWS: [string, (t: AiTier) => string][] = [
   ["Voice", (t) => cell(t.voice, " a day")],
   ["Music, upscale", (t) => (t.music ? `${t.music} + ${t.upscale} a day` : "—")],
   ["Credit cap", (t) => (t.cap ? `${t.cap} a day` : "—")],
+  ["Markup on Credits", (t) => (t.markup ? `${Math.round(t.markup * 100)}%` : "None")],
+  ["Free GPU time", (t) => (t.gpuMinutes ? `${t.gpuMinutes} min a day` : "—")],
+  ["API limits", (t) => `${t.apiBoost}×`],
+  ["Telegram alerts", (t) => (t.alerts === null ? "Any number of tokens" : `${t.alerts} tokens`)],
+  ["Also", (t) => t.extra],
 ];
 const RULES = [
   ["7d", "The lowest balance counts", `your tier is set by the lowest balance of the last ${AI_ACCESS.holdDays} days, so coins passed between wallets or borrowed for a minute do not count`],
@@ -35,13 +40,13 @@ export function HolderPrompts() {
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div>
           <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[30rem] text-[13px]">
+            <table className="w-full min-w-[40rem] text-[13px]">
               <thead>
                 <tr className="border-b border-line bg-[#0c0c0c] text-left">
                   <th className="px-3 py-2.5 font-normal text-muted" />
                   {SHOWN.map((x) => (
-                    <th key={x.id} className={x.id === "full" ? "px-3 py-2.5 font-medium text-[var(--ai)]" : "px-3 py-2.5 font-medium text-text"}>
-                      {x.id === "full" ? "Top holders" : x.name}
+                    <th key={x.id} className={hasFull(x) ? "px-3 py-2.5 font-medium text-[var(--ai)]" : "px-3 py-2.5 font-medium text-text"}>
+                      {x.name}
                       <span className="block font-mono text-[12px] font-normal text-muted">{`${fmt(x.minCoins)}+ coins`}</span>
                     </th>
                   ))}
@@ -52,7 +57,7 @@ export function HolderPrompts() {
                   <tr key={k} className="border-b border-line/60 last:border-0">
                     <td className="px-3 py-2 text-muted">{k}</td>
                     {SHOWN.map((x) => (
-                      <td key={x.id} className={x.id === "full" ? "bg-[var(--ai)]/[0.05] px-3 py-2 font-mono tabular-nums text-text" : "px-3 py-2 font-mono tabular-nums text-[#c9d3cc]"}>
+                      <td key={x.id} className={hasFull(x) ? "bg-[var(--ai)]/[0.05] px-3 py-2 font-mono tabular-nums text-text" : "px-3 py-2 font-mono tabular-nums text-[#c9d3cc]"}>
                         {f(x)}
                       </td>
                     ))}

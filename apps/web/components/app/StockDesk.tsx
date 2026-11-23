@@ -112,6 +112,7 @@ export function StockDesk() {
           tone={desk.lookalikes.length ? "caution" : "good"}
           value={desk.lookalikes.length}
           valueLabel="lookalikes copy an issuer token's name"
+          source={`chain · block ${Number(desk.block).toLocaleString("en-US")} · ${new Date(desk.at).toUTCString().slice(17, 22)} UTC`}
           facts={[
             ["Issuer tokens", desk.rows.length],
             ["Priced now", priced],

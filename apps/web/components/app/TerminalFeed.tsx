@@ -20,7 +20,7 @@ type Live = {
   dev?: { address: string } | null;
   all?: { created?: number | null } | null;
 };
-type Tag = "dev" | "whale" | "sniper" | "bot";
+type Tag = "dev" | "whale" | "sniper" | "bot" | "holder";
 type Row =
   | { kind: "swap"; t: number; side: "buy" | "sell"; token: number; base: number; usd: number; tx: string; wallet: string | null; tags: Tag[] }
   | { kind: "add" | "remove"; t: number; token: number | null; base: number | null; usd: number | null; tx: string; wallet: string | null; tags: Tag[] };
@@ -30,12 +30,15 @@ const WHALE_TOTAL = 5_000;
 const SNIPE_S = 120;
 const BOT_SWAPS = 50;
 const BOT_GAP_S = 60;
+/** a steady holder: only bought in this window, first buy at least this long ago, never sold */
+const HOLD_S = 6 * 3600;
 
 const TAG: Record<Tag, { label: string; cls: string }> = {
   dev: { label: "Dev", cls: "border-[#cf7e55]/60 text-[#e7a07a]" },
   whale: { label: "Whale", cls: "border-[#4fbfd3]/60 text-[#7fd3e2]" },
   sniper: { label: "Sniper", cls: "border-[#d9a441]/60 text-[#e7c27a]" },
   bot: { label: "Bot", cls: "border-line text-muted" },
+  holder: { label: "Holder", cls: "border-leaf/50 text-leaf" },
 };
 const FILTERS = [
   { id: "all", label: "All" },
@@ -45,6 +48,7 @@ const FILTERS = [
   { id: "whale", label: "Whales" },
   { id: "sniper", label: "Snipers" },
   { id: "bot", label: "Bots" },
+  { id: "holder", label: "Holders" },
 ] as const;
 type Filter = (typeof FILTERS)[number]["id"];
 
@@ -64,12 +68,14 @@ export function TerminalFeed({ live, now }: { live: Live; now: number }) {
     const createdRaw = live.all?.created ?? null;
     const created = createdRaw ? (createdRaw > 1e12 ? createdRaw / 1000 : createdRaw) : null;
     // per signing wallet: how much and how often it traded in this window
-    const by = new Map<string, { usd: number; ts: number[] }>();
+    const by = new Map<string, { usd: number; ts: number[]; sold: boolean; firstBuy: number | null }>();
     for (const x of live.trades)
       if (x.from) {
-        const s = by.get(x.from) ?? { usd: 0, ts: [] };
+        const s = by.get(x.from) ?? { usd: 0, ts: [], sold: false, firstBuy: null };
         s.usd += x.base * k;
         s.ts.push(x.t);
+        if (x.side === "sell") s.sold = true;
+        else s.firstBuy = s.firstBuy === null ? x.t : Math.min(s.firstBuy, x.t);
         by.set(x.from, s);
       }
     const botty = new Set<string>();
@@ -86,6 +92,8 @@ export function TerminalFeed({ live, now }: { live: Live; now: number }) {
       if (swapUsd >= WHALE_SWAP || (by.get(w)?.usd ?? 0) >= WHALE_TOTAL) out.push("whale");
       if (buy && created && t - created >= 0 && t - created <= SNIPE_S) out.push("sniper");
       if (botty.has(w)) out.push("bot");
+      const h = by.get(w);
+      if (h && !h.sold && h.firstBuy !== null && now - h.firstBuy >= HOLD_S && !botty.has(w)) out.push("holder");
       return out;
     };
     const swaps: Row[] = live.trades.map((x) => {
@@ -97,7 +105,7 @@ export function TerminalFeed({ live, now }: { live: Live; now: number }) {
       return { kind: e.kind, t: e.t, token: e.token, base: e.base, usd: u, tx: e.tx, wallet: e.from ?? null, tags: tagsOf(e.from ?? null, u ?? 0, e.t, false) };
     });
     return [...swaps, ...moves].sort((a, b) => b.t - a.t);
-  }, [live, k]);
+  }, [live, k, now]);
 
   const shown = rows
     .filter((r) => (filter === "all" ? true : filter === "swaps" ? r.kind === "swap" : filter === "liquidity" ? r.kind !== "swap" : r.tags.includes(filter)))

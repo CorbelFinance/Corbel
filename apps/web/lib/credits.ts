@@ -13,7 +13,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { getClient } from "@corbel/data/chain";
 import { store } from "./store";
 
-/** What we add on top of the model's or GPU's list price: 10%. */
+/** The base markup on list price (no tier); a holder's own markup comes from lib/markup by tier. */
 export const MARKUP = 0.1;
 export const CREDITS = { minTopUp: 1, maxKeys: 5, defaultCap: 5, maxCap: 500 } as const;
 const USDG = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";

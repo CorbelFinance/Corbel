@@ -68,6 +68,7 @@ export function CreatorDossier() {
           tone={d.total === 0 ? "info" : rate != null && rate >= 50 ? "bad" : d.drained > 0 ? "caution" : "good"}
           value={rate != null ? `${rate}%` : d.total}
           valueLabel={rate != null ? `of ${known} tokens with a known fate were drained` : "tokens launched"}
+          source="index · every launch and pool this wallet made in the indexed window"
           facts={[
             ["Tokens", String(d.total)],
             ["Trading", String(d.trading)],

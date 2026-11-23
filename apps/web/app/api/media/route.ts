@@ -1,4 +1,4 @@
-import { AI_ACCESS } from "@corbel/config";
+import { AI_ACCESS, hasFull, FULL_TIER } from "@corbel/config";
 import { createHash, randomBytes } from "node:crypto";
 import { session, sameOrigin } from "@/lib/auth";
 import { guardWait } from "@/lib/guard";
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
   try {
     const s = session(req);
     const id = new URL(req.url).searchParams.get("id");
-    if (!id) return Response.json({ open: mediaOn(), signedIn: !!s, top: tierOf(s?.address)?.id === "full", limits: limitsFor(s?.address ?? null), left: left(s ? who(limitKey(s.address).key) : null, s?.address ?? null), models: publicModels() }, { headers: { "cache-control": "no-store" } });
+    if (!id) return Response.json({ open: mediaOn(), signedIn: !!s, top: hasFull(tierOf(s?.address)), limits: limitsFor(s?.address ?? null), left: left(s ? who(limitKey(s.address).key) : null, s?.address ?? null), models: publicModels() }, { headers: { "cache-control": "no-store" } });
     if (!s) return Response.json({ error: "Sign in with your wallet." }, { status: 401 });
     const job = db()?.prepare("SELECT chat, who, kind, at, file, type FROM jobs WHERE id = ?").get(id) as { chat: string; who: string; kind: string; at: number; file: string | null; type: string | null } | undefined;
     if (!job || job.who !== who(s.address)) return Response.json({ error: "No such job." }, { status: 404 });
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     const m = typeof j?.model === "string" ? findModel(j.model) : null;
     if (!m) return Response.json({ error: "Pick a model." }, { status: 400 });
     const tier = tierOf(s.address);
-    if (m.id.startsWith("x:") && tier?.id !== "full") return Response.json({ error: `This model is for Full holders: ${AI_ACCESS.tiers.at(-1)!.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
+    if (m.id.startsWith("x:") && !hasFull(tier)) return Response.json({ error: `This model is for Full holders: ${FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
     // a model that starts from a file gets the one this wallet uploaded; tools may run with no words at all
     const needs = (m as { needs?: "image" | "video" | null }).needs ?? null;
     const isTool = !!(m as { tool?: boolean }).tool;

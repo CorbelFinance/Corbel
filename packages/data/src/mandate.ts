@@ -13,7 +13,7 @@ const NVDA = "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec";
 const PEPE = "0x0ad3b612c5988e4257a0aab6f2713a3a5371d111";
 const ZERO = "0x0000000000000000000000000000000000000000";
 
-export const RULE_NAMES = ["Traded", "Assets", "Size", "Budget", "Price", "Window", "Bond", "Pool"] as const;
+export const RULE_NAMES = ["Traded", "Assets", "Size", "Budget", "Price", "Window", "Bond", "Pool", "Score"] as const;
 
 type Key = { currency0: Hex; currency1: Hex; fee: number; tickSpacing: number; hooks: Hex };
 export interface Scenario {
@@ -40,6 +40,13 @@ export const SCENARIOS: Scenario[] = [
   { id: "three-strikes", venue: 1, tokenIn: RH.USDG, tokenOut: NVDA, amountIn: 9_000_000_000n, acceptBps: 0, key: NVDA_TRAP, repeat: 3, day: "weekday" },
   { id: "honest", venue: 0, tokenIn: RH.WETH, tokenOut: RH.USDG, amountIn: parseEther("0.2"), acceptBps: 50, repeat: 1, day: "weekday" },
 ];
+
+/** What a scenario asks the agent to do, in plain units, for pages that describe it. */
+export function describeScenario(s: Scenario) {
+  const sym = (a: string) => ({ [RH.USDG.toLowerCase()]: "USDG", [RH.WETH.toLowerCase()]: "WETH", [NVDA]: "NVDA", [PEPE]: "PEPE" })[a.toLowerCase()] ?? "token";
+  const dec = sym(s.tokenIn) === "USDG" ? 6 : 18;
+  return { id: s.id, repeat: s.repeat, day: s.day, in: sym(s.tokenIn), out: sym(s.tokenOut), amount: Number(s.amountIn) / 10 ** dec, acceptBps: s.acceptBps };
+}
 
 export interface LabAttempt {
   rule: (typeof RULE_NAMES)[number];

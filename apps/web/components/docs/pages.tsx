@@ -545,6 +545,7 @@ export const DOCS: Doc[] = [
           <DTable
             code="W-01" title="TOOLS" cols={["Tool", "What it shows"]}
             rows={[
+              ["X-ray", "Each token the wallet holds sold whole into ETH in a simulation at the latest block: spot value against what a sale really pays, and which tokens have no way out."],
               ["Exposure", "What anyone can learn about a wallet from the chain alone: what it holds, where it traded, which swaps were large."],
               ["Stress test", "The holdings after a fall, token by token, at the depth the real pools have."],
               ["Paper account", "Trade pretend USDG at the fills the real pools would give. No money moves."],

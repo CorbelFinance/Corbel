@@ -54,6 +54,15 @@ export async function GET(req: Request) {
       ...TOKENS.map((t) => c.readContract({ ...m, functionName: "limits", args: [t.address as `0x${string}`] })),
     ]);
     const bondDec = Number(await c.readContract({ address: bondToken, abi: ERC20, functionName: "decimals" }));
+    // the lifetime budget and the end date came with a later version of the contract: an older mandate has neither
+    const EXTRA = [
+      { type: "function", name: "endsAt", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+      { type: "function", name: "maxTotal", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+      { type: "function", name: "spentTotal", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+    ] as const;
+    const mx = { address: m.address, abi: EXTRA };
+    const endsAt = await c.readContract({ ...mx, functionName: "endsAt" }).catch(() => null);
+    const totals = endsAt === null ? null : await Promise.all(TOKENS.map(async (t) => [await c.readContract({ ...mx, functionName: "maxTotal", args: [t.address as `0x${string}`] }), await c.readContract({ ...mx, functionName: "spentTotal", args: [t.address as `0x${string}`] })] as const));
     const [slip, hourFrom, hourTo, weekdaysOnly, cooldown, minBond, slashBps, strikesToFreeze] = rules;
     const body = {
       block: Number(block),
@@ -68,8 +77,11 @@ export async function GET(req: Request) {
       rules: { maxSlippagePct: Number(slip) / 100, hourFrom: Number(hourFrom), hourTo: Number(hourTo), weekdaysOnly, cooldownS: Number(cooldown), minBond: Number(minBond) / 10 ** bondDec, slashPct: Number(slashBps) / 100, strikesToFreeze: Number(strikesToFreeze) },
       limits: TOKENS.map((t, i) => {
         const [allowed, perTrade, perDay] = lims[i] as readonly [boolean, bigint, bigint];
-        return { symbol: t.symbol, allowed, perTrade: Number(perTrade) / 10 ** t.decimals, perDay: Number(perDay) / 10 ** t.decimals };
+        const tot = totals?.[i];
+        return { symbol: t.symbol, allowed, perTrade: Number(perTrade) / 10 ** t.decimals, perDay: Number(perDay) / 10 ** t.decimals, total: tot && tot[0] > 0n ? Number(tot[0]) / 10 ** t.decimals : null, spent: tot ? Number(tot[1]) / 10 ** t.decimals : null };
       }),
+      // null: the mandate's contract predates the end date and the lifetime budget
+      term: endsAt === null ? null : { endsAt: endsAt > 0n ? Number(endsAt) : null, maxDays: 90 },
       proofs: { traded: MANDATES_POOL.traded, refused: MANDATES_POOL.refused, revoked: MANDATES_POOL.revoked },
     };
     hit = { at: Date.now(), body };

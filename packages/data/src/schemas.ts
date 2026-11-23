@@ -28,6 +28,20 @@ export const TrustReport = z.object({
       ms: z.number(),
     })
     .optional(),
+  /** wallets the creator exempted from the launch fee, read from the launch transaction; not scored */
+  waivers: z
+    .object({
+      tx: z.string(),
+      block: z.string(),
+      wallets: z.number(),
+      bought: z.number(),
+      fast: z.number(),
+      buyers: z.number(),
+      eth: z.number(),
+      holdNow: z.number().nullable(),
+      top: z.array(z.object({ address: z.string(), bought: z.number() })),
+    })
+    .optional(),
 });
 
 export type TrustReport = z.infer<typeof TrustReport>;

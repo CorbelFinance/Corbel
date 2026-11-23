@@ -65,7 +65,36 @@ type Tool = "none" | "h" | "v" | Two;
 const FIB = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
 const DRAW_KEY = "corbel.draw.";
 
-export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey }: { bars: Bar[]; mode: "candles" | "line"; unit: string; height?: number; markers?: Marker[]; drawKey?: string }) {
+/** The chart as a 1600x900 picture for X: title, the candles as drawn, the time it was taken. Drawings stay out. */
+export function chartImage(src: HTMLCanvasElement, title: string, sub: string): string {
+  const W = 1600, H = 900, top = 168, foot = 84;
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const x = c.getContext("2d")!;
+  x.fillStyle = "#0b0b0b";
+  x.fillRect(0, 0, W, H);
+  x.strokeStyle = "rgba(255,255,255,.14)";
+  x.strokeRect(20.5, 20.5, W - 41, H - 41);
+  x.fillStyle = "#fff";
+  x.font = "700 52px system-ui,-apple-system,Segoe UI,sans-serif";
+  x.fillText(title, 64, 102);
+  x.fillStyle = "rgba(255,255,255,.62)";
+  x.font = "500 26px ui-monospace,Consolas,monospace";
+  x.fillText(sub, 64, 142);
+  const k = Math.min((W - 96) / src.width, (H - top - foot) / src.height);
+  const dw = src.width * k, dh = src.height * k;
+  x.drawImage(src, (W - dw) / 2, top + (H - top - foot - dh) / 2, dw, dh);
+  x.font = "600 24px ui-monospace,Consolas,monospace";
+  x.fillStyle = "#6fe7a8";
+  x.fillText("corbel.finance", 64, H - 40);
+  x.fillStyle = "rgba(255,255,255,.55)";
+  const at = `${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC`;
+  x.fillText(at, W - 64 - x.measureText(at).width, H - 40);
+  return c.toDataURL("image/png");
+}
+
+export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey, shareTitle }: { bars: Bar[]; mode: "candles" | "line"; unit: string; height?: number; markers?: Marker[]; drawKey?: string; shareTitle?: string }) {
   // the volume pane's height, dragged at its top edge and kept in this browser
   const [scale, setScale] = useState<Scale | null>(null);
   const [tool, setTool] = useState<Tool>("none");
@@ -490,6 +519,22 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey 
         <button type="button" onClick={() => (setAuto(true), setYOff(0), setYZoom(1))} aria-pressed={auto} title="Fit the price to the visible candles" className={cx("rounded-md border px-2 py-0.5 font-mono text-[12px]", auto ? "border-leaf/50 bg-leaf/15 text-leaf" : "border-line bg-[#0e0e0e]/90 text-muted hover:text-text")}>
           auto
         </button>
+        {shareTitle && view.length > 0 && (
+          <button
+            type="button"
+            title="Save the chart as an image for X"
+            onClick={() => {
+              if (!cv.current) return;
+              const l = document.createElement("a");
+              l.href = chartImage(cv.current, shareTitle, `${view.length} ${mode === "line" ? "points" : "candles"} · price in ${unit} · from the chain's swaps`);
+              l.download = `${shareTitle.split(" ")[0]!.replace(/[^\w-]/g, "") || "chart"}-chart.png`;
+              l.click();
+            }}
+            className="rounded-md border border-line bg-[#0e0e0e]/90 px-2 py-0.5 font-mono text-[12px] text-muted hover:text-text"
+          >
+            image
+          </button>
+        )}
       </span>
       {!view.length && <p className="absolute inset-0 flex items-center justify-center font-medium text-[12px] uppercase tracking-[0.1em] text-muted">No swaps in this window</p>}
     </div>

@@ -1,5 +1,5 @@
 "use client";
-import { AI_ACCESS, FULL_MODELS } from "@corbel/config";
+import { AI_ACCESS, FULL_MODELS, FULL_TIER } from "@corbel/config";
 
 import Link from "next/link";
 
@@ -163,7 +163,7 @@ function ModelPick({ list, value, onChange, canTop }: { list: ChatModel[]; value
               </li>
             )}
             {!shown.length && <li className="px-3 py-6 text-center text-[12.5px] text-muted">No model by that name.</li>}
-            <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for Full holders ({AI_ACCESS.tiers.at(-1)!.minCoins.toLocaleString("en-US")} $CORBEL): text, pictures, video, voice and music in one chat.</li>
+            <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for Full holders ({FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL): text, pictures, video, voice and music in one chat.</li>
           </ul>
         </div>
       )}
@@ -631,7 +631,7 @@ export function Chat() {
                         </li>
                       );
                     })}
-                  <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for Full holders ({AI_ACCESS.tiers.at(-1)!.minCoins.toLocaleString("en-US")} $CORBEL): Veo, Sora, Kling, Runway, Flux and more, in full quality.</li>
+                  <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for Full holders ({FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL): Veo, Sora, Kling, Runway, Flux and more, in full quality.</li>
                 </ul>
               )}
             </div>

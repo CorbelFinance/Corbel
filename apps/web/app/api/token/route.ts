@@ -1,7 +1,8 @@
 import { asBackground, buildReport, getClient, parseAddress, redact } from "@corbel/data/chain";
 import { countCheck, saveVerdict } from "@/lib/stats";
-import { creatorRecord, launchCreator, launcherHistory, poolLauncher, sameTicker, searchTicker, v4PoolsFor } from "@corbel/indexer";
+import { creatorRecord, launchCreator, launchTx, launcherHistory, poolLauncher, sameTicker, searchTicker, v4PoolsFor } from "@corbel/indexer";
 import { guardWait } from "@/lib/guard";
+import { award } from "@/lib/points";
 import { holdersBrief, holdersOf } from "@/lib/holdersOf";
 import { byToken, dsTokens } from "@/lib/pairs";
 
@@ -43,7 +44,7 @@ async function handle(req: Request) {
   const client0 = getClient(process.env.RPC_URL);
   if (hit && client0 && Date.now() - hit.at < STALE) {
     if (!inflight.has(key)) {
-      const p = asBackground(() => buildReport(client0, address, q, { v4PoolsFor, launcherHistory, sameTicker, poolLauncher, launchCreator, creatorRecord }));
+      const p = asBackground(() => buildReport(client0, address, q, { v4PoolsFor, launcherHistory, sameTicker, poolLauncher, launchCreator, creatorRecord, launchTx }));
       inflight.set(key, p);
       p.then((body) => {
         if (cache.size >= MAX) cache.delete(cache.keys().next().value!);
@@ -62,7 +63,7 @@ async function handle(req: Request) {
   try {
     let p = inflight.get(key);
     if (!p) {
-      p = buildReport(client, address, q, { v4PoolsFor, launcherHistory, sameTicker, poolLauncher, launchCreator, creatorRecord });
+      p = buildReport(client, address, q, { v4PoolsFor, launcherHistory, sameTicker, poolLauncher, launchCreator, creatorRecord, launchTx });
       inflight.set(key, p);
     }
     const body = await p;
@@ -107,7 +108,7 @@ function warmOwn() {
     const client = getClient(process.env.RPC_URL);
     const key = own.toLowerCase();
     if (!client || inflight.has(key)) return;
-    const p = asBackground(() => buildReport(client, own, own, { v4PoolsFor, launcherHistory, sameTicker, poolLauncher, launchCreator, creatorRecord }));
+    const p = asBackground(() => buildReport(client, own, own, { v4PoolsFor, launcherHistory, sameTicker, poolLauncher, launchCreator, creatorRecord, launchTx }));
     inflight.set(key, p);
     p.then((body) => void cache.set(key, { at: Date.now(), body }))
       .catch((e) => console.error("[api/token] warm", redact(e)))
@@ -124,7 +125,9 @@ export async function GET(req: Request) {
   const g = await guardWait(req, "token", 40_000);
   if ("blocked" in g) return g.blocked;
   try {
-    return await handle(req);
+    const res = await handle(req);
+    if (res.ok) award(req, "check");
+    return res;
   } finally {
     g.release();
   }

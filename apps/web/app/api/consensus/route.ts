@@ -54,7 +54,7 @@ export async function POST(req: Request) {
   if (!sameOrigin(req)) return Response.json({ error: "Refused." }, { status: 403 });
   const s = session(req);
   if (!s) return Response.json({ error: "Sign in with your wallet to ask the panel." }, { status: 401 });
-  if (!tierOf(s.address)) return Response.json({ error: "The model panel is for $CORBEL holders (Light or Full)." }, { status: 403 });
+  if (!tierOf(s.address)) return Response.json({ error: "The model panel is for $CORBEL holders, from the Light tier up." }, { status: 403 });
   const j = (await req.json().catch(() => null)) as { token?: unknown } | null;
   const token = typeof j?.token === "string" ? j.token.trim().toLowerCase() : "";
   if (!isAddress(token)) return Response.json({ error: "Paste a token address." }, { status: 400 });

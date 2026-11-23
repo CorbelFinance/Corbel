@@ -7,7 +7,7 @@ import { cx } from "@corbel/ui";
 import { Idle } from "./kit";
 
 type Entry = { id: number; minute: number; scenario: string; block: string; rule: string; traded: boolean; slashed: string; strikes: number; frozen: boolean };
-type Log = { entries: Entry[]; totals: { runs: number; traded: number; stopped: number; frozen: number } | null };
+type Log = { entries: Entry[]; totals: { runs: number; traded: number; stopped: number; frozen: number } | null; chain?: { ok: boolean; checked: number; brokenAt: number | null; head: string | null } };
 
 const title = (id: string) => (MANDATE_DEMO.scenarios as Record<string, { title: string }>)[id]?.title ?? id;
 const usdg = (raw: string) => (Number(raw) / 1e6).toLocaleString("en", { maximumFractionDigits: 2 });
@@ -150,6 +150,13 @@ export function DecisionLog() {
           </ol>
         )}
         <p className="mt-3 px-1 text-[12px] text-muted">Each line is a real CorbelMandate run inside one eth_call against live pools. No visitor data is kept.</p>
+        {log?.chain && log.chain.checked > 0 && (
+          <p className="mt-1.5 break-all px-1 font-mono text-[12px] text-muted">
+            {log.chain.ok
+              ? <>Chained by hash: each entry carries the sha256 of the one before. {log.chain.checked} entries check out · head <span className="text-text">{log.chain.head!.slice(0, 16)}…</span></>
+              : <span className="text-flesh">{`The hash chain breaks at entry ${log.chain.brokenAt}: an entry was changed or removed.`}</span>}
+          </p>
+        )}
       </section>
     </div>
   );

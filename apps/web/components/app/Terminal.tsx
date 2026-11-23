@@ -890,7 +890,7 @@ export function Terminal() {
                 </span>
               </div>
               <div className="px-2 pt-2">
-                <Candles bars={bars} mode={mode} unit={unit} markers={markers} height={chartH} drawKey={live.token.address.toLowerCase()} />
+                <Candles bars={bars} mode={mode} unit={unit} markers={markers} height={chartH} drawKey={live.token.address.toLowerCase()} shareTitle={`${live.token.symbol} / ${live.pool.base} · ${TF.find((t) => t.id === tf)?.label ?? ""}`} />
               </div>
               <Gutter dir="y" value={chartH} set={setChartH} def={chartDef} label="Chart height" className="w-full" />
               {stats && (

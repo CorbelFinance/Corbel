@@ -145,6 +145,8 @@ export function SwapButton({ from, to, amount, slippage = 0.01 }: { from: string
       const after = await balOf();
       const got = before !== null && after !== null ? formatUnits(after - before, q.to.decimals) : null;
       saveAct({ ...act, got, status: "done" });
+      // reward points: the server checks the swap on chain before counting it
+      void fetch("/api/rewards/swap", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tx: hash }) }).catch(() => undefined);
       mark("done");
       setState({ kind: "done", hash, quoted: formatUnits(quoted, q.to.decimals), got, sym: q.to.symbol });
     } catch (e) {

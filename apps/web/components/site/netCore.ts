@@ -25,7 +25,9 @@
 export type Story =
   "overview" | "trust" | "stocks" | "trade" | "agents" | "account" | "models" | "token" | "paths" | "lens";
 type Kind = "wallet" | "pool" | "agent" | "model" | "vault" | "router" | "bad" | "share" | "token" | "corbel";
-type Node = { x: number; z: number; label: string; kind: Kind; lift?: number; at?: number };
+type Node = { x: number; z: number; label: string; kind: Kind; lift?: number; at?: number; tone?: [number, number, number] };
+/** The layers wear their roadmap block colours in the loader too (config ROAD_BLOCKS). */
+const T_CHECK: [number, number, number] = [111, 231, 168], T_TRADE: [number, number, number] = [47, 191, 114], T_EARN: [number, number, number] = [244, 193, 82], T_AGENTS: [number, number, number] = [155, 134, 228], T_AI: [number, number, number] = [255, 154, 92], T_STOCKS: [number, number, number] = [217, 70, 239];
 type Edge = {
   a: number;
   b: number;
@@ -196,12 +198,13 @@ function setup(story: Story): { nodes: Node[]; edges: Edge[]; redZone: (x: numbe
       return {
         nodes: [
           { x: 0.0, z: 0.48, label: "CORBEL", kind: "corbel", lift: 0.42, at: 0.25 },
-          { x: -0.78, z: 0.32, label: "Check", kind: "router", at: 0.45 },
-          { x: -0.5, z: 0.82, label: "Swap", kind: "pool", at: 0.57 },
-          { x: 0.5, z: 0.84, label: "Earn", kind: "vault", at: 0.69 },
-          { x: 0.8, z: 0.34, label: "Agents", kind: "agent", at: 0.81 },
-          { x: 0.42, z: 0.24, label: "AI & GPUs", kind: "model", at: 0.93 },
+          { x: -0.78, z: 0.32, label: "Check", kind: "router", at: 0.45, tone: T_CHECK },
+          { x: -0.5, z: 0.82, label: "Swap", kind: "pool", at: 0.55, tone: T_TRADE },
+          { x: 0.5, z: 0.84, label: "Earn", kind: "vault", at: 0.65, tone: T_EARN },
+          { x: 0.8, z: 0.34, label: "Agents", kind: "agent", at: 0.75, tone: T_AGENTS },
+          { x: 0.42, z: 0.24, label: "AI & GPUs", kind: "model", at: 0.85, tone: T_AI },
           { x: -0.42, z: 0.24, label: "holders", kind: "wallet", at: 1.05 },
+          { x: 0.12, z: 0.1, label: "Stocks", kind: "token", at: 0.95, tone: T_STOCKS },
         ],
         edges: [
           { a: 0, b: 1 },
@@ -210,6 +213,7 @@ function setup(story: Story): { nodes: Node[]; edges: Edge[]; redZone: (x: numbe
           { a: 0, b: 4 },
           { a: 0, b: 5 },
           { a: 6, b: 0 },
+          { a: 0, b: 7 },
         ],
         redZone: () => false,
       };
@@ -753,11 +757,11 @@ export function runNet(env: NetEnv): NetCtl {
       const on = (e.route === undefined || e.route === best) && onPath;
       const col = e.bad
         ? RED
-        : B.kind === "model" || A.kind === "model"
+        : B.tone ?? A.tone ?? (B.kind === "model" || A.kind === "model"
           ? AI
           : B.kind === "agent" || A.kind === "agent"
             ? LAV
-            : ACC;
+            : ACC);
       ctx.beginPath();
       const steps = Math.max(1, Math.round(28 * grow));
       for (let s = 0; s <= steps; s++) {
@@ -851,7 +855,7 @@ export function runNet(env: NetEnv): NetCtl {
       const g = P(n.x, hAt(n.x, n.z), n.z),
         p = P(n.x, nodeY[i]!, n.z);
       const bad = n.kind === "bad" || (story === "stocks" && n.kind === "share");
-      const col = bad ? RED : n.kind === "model" ? AI : n.kind === "agent" ? LAV : ACC;
+      const col = bad ? RED : n.tone ?? (n.kind === "model" ? AI : n.kind === "agent" ? LAV : ACC);
       const dimK = onPath ? 1 : 0.35;
       const big = n.kind === "corbel";
       ctx.globalAlpha = appear * dimK;

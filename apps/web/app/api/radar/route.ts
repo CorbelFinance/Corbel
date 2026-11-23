@@ -1,17 +1,18 @@
 import { indexStatus, poolsSince, recentPools } from "@corbel/indexer";
 import { guardWait } from "@/lib/guard";
 import { launchpadOf } from "@corbel/config";
+import { blocksPerSecond } from "@/lib/blockRate";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
  * New pools on Robinhood Chain, newest first: GET /api/radar?kind=v2|v4&before=<block>&limit=<n>.
- * Reads the local index only; no chain call. Ages are estimated from block height (~4 blocks per second).
+ * Reads the local index; the block rate that turns heights into hours is measured from the chain (lib/blockRate).
  */
-const BLOCKS_PER_DAY = 345_600;
 
-function handle(req: Request) {
+async function handle(req: Request) {
   const u = new URL(req.url).searchParams;
   const kind = u.get("kind");
   const before = Number(u.get("before") ?? "");
@@ -24,9 +25,10 @@ function handle(req: Request) {
     limit: Number.isFinite(limit) ? limit : 50,
   });
   const head = status.high;
-  const day = head ? poolsSince(head - BLOCKS_PER_DAY) : null;
+  const bps = await blocksPerSecond();
+  const day = head ? poolsSince(head - Math.round(bps * 86_400)) : null;
   return Response.json(
-    { head, low: status.low, pools: status.pools, last24h: day ? Object.fromEntries(day.map((r) => [r.kind, r.n])) : null, rows: rows?.map(({ pad, hook, ...r }) => ({ ...r, launchpad: launchpadOf(pad, hook) })) ?? null },
+    { head, bps, low: status.low, pools: status.pools, last24h: day ? Object.fromEntries(day.map((r) => [r.kind, r.n])) : null, rows: rows?.map(({ pad, hook, ...r }) => ({ ...r, launchpad: launchpadOf(pad, hook) })) ?? null },
     { headers: { "cache-control": "no-store" } },
   );
 }
@@ -36,7 +38,9 @@ export async function GET(req: Request) {
   const g = await guardWait(req, "radar");
   if ("blocked" in g) return g.blocked;
   try {
-    return await handle(req);
+    const res = await handle(req);
+    if (res.ok) award(req, "radar");
+    return res;
   } finally {
     g.release();
   }

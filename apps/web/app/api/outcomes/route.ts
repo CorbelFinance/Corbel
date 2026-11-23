@@ -1,5 +1,6 @@
 import { launchOutcomes } from "@corbel/indexer";
 import { guardWait } from "@/lib/guard";
+import { blocksPerSecond } from "@/lib/blockRate";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
   if ("blocked" in g) return g.blocked;
   try {
     if (cached && Date.now() - cached.at < 60_000) return Response.json(cached.body);
-    const o = launchOutcomes();
+    const o = launchOutcomes(Math.round((await blocksPerSecond()) * 3600));
     if (!o) return Response.json({ error: "The index is not available yet." }, { status: 503 });
     cached = { at: Date.now(), body: o };
     return Response.json(o);

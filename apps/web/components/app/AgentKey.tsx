@@ -21,7 +21,8 @@ type Key = {
   bondSymbol: string;
   unbondDelayH: number;
   rules: { maxSlippagePct: number; hourFrom: number; hourTo: number; weekdaysOnly: boolean; cooldownS: number; minBond: number; slashPct: number; strikesToFreeze: number };
-  limits: { symbol: string; allowed: boolean; perTrade: number; perDay: number }[];
+  limits: { symbol: string; allowed: boolean; perTrade: number; perDay: number; total?: number | null; spent?: number | null }[];
+  term?: { endsAt: number | null; maxDays: number } | null;
   proofs: { traded: string; refused: string; revoked: string };
   error?: string;
 };
@@ -92,7 +93,7 @@ export function AgentKey() {
           <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.08em] text-muted">May spend</p>
           <table className="mt-2 w-full font-mono text-[13px]">
             <thead>
-              <tr className="text-left text-[11.5px] text-muted"><th className="py-1 font-normal">token</th><th className="py-1 text-right font-normal">per trade</th><th className="py-1 text-right font-normal">per day</th></tr>
+              <tr className="text-left text-[11.5px] text-muted"><th className="py-1 font-normal">token</th><th className="py-1 text-right font-normal">per trade</th><th className="py-1 text-right font-normal">per day</th><th className="py-1 text-right font-normal">in total</th></tr>
             </thead>
             <tbody>
               {k.limits.map((l) => (
@@ -100,6 +101,7 @@ export function AgentKey() {
                   <td className="py-1.5 text-text">{l.symbol}</td>
                   <td className="py-1.5 text-right">{l.allowed ? n(l.perTrade) : <span className="text-flesh">not allowed</span>}</td>
                   <td className="py-1.5 text-right">{l.allowed ? n(l.perDay) : "—"}</td>
+                  <td className="py-1.5 text-right">{!l.allowed ? "—" : k.term === null || k.term === undefined ? <span className="text-muted">n/a</span> : l.total ? `${n(l.spent ?? 0)} of ${n(l.total)}` : "no cap"}</td>
                 </tr>
               ))}
             </tbody>
@@ -109,6 +111,7 @@ export function AgentKey() {
             <dt className="text-muted">hours</dt><dd className="text-right text-text">{hours}{r.weekdaysOnly ? ", weekdays" : ""}</dd>
             <dt className="text-muted">between trades</dt><dd className="text-right text-text">{r.cooldownS ? `${r.cooldownS}s` : "no wait"}</dd>
             <dt className="text-muted">pools</dt><dd className="text-right text-text">owner-approved only</dd>
+            <dt className="text-muted">ends</dt><dd className="text-right text-text">{k.term === null || k.term === undefined ? "made before end dates" : k.term.endsAt ? new Date(k.term.endsAt * 1000).toISOString().slice(0, 10) : `no date set (at most ${k.term.maxDays} days)`}</dd>
           </dl>
         </div>
         <div className="bg-bg p-5">

@@ -22,9 +22,10 @@ type Row = {
   launches: number;
   dead: 0 | 1 | null;
 };
-type Feed = { head: number | null; low: number | null; pools: number; last24h: Record<string, number> | null; rows: Row[] };
+type Feed = { head: number | null; bps?: number; low: number | null; pools: number; last24h: Record<string, number> | null; rows: Row[] };
 
-const BLOCK_S = 1 / 9.5; // measured on 4663 (2026-11-18): ~9.5 blocks per second
+// seconds per block: the rate the API measured from the chain, a recent measurement until it answers
+let BLOCK_S = 1 / 8.7;
 const REFRESH_MS = 20_000;
 
 function age(head: number | null, block: number) {
@@ -78,6 +79,7 @@ export function Radar() {
       try {
         const f = await load(kind);
         if (alive) {
+          if (f.bps) BLOCK_S = 1 / f.bps;
           setFeed(f);
           setError(null);
         }

@@ -12,7 +12,8 @@ import { readV4Lock } from "./lock.ts";
 import { runHop } from "./quote.ts";
 import { findV2, scanV4, type V2Pool, type V4Pool } from "./pools.ts";
 import { simulateV2, simulateV4, type SimResult } from "./sim.ts";
-import { ethUsd, v4State } from "../market.ts";
+import { readWaivers, type Waivers } from "./waivers.ts";
+import { rankV4ByDepth } from "../market.ts";
 
 export interface TrustIndex {
   /** v4 pools from the local index (faster and deeper than a live scan) */
@@ -27,6 +28,8 @@ export interface TrustIndex {
   poolLauncher?(id: string): string | null;
   /** other tokens using the same ticker */
   sameTicker?(symbol: string, exclude: string): number;
+  /** the launch transaction of a launchpad token */
+  launchTx?(token: string): { tx: string; pad: string; block: number } | null;
 }
 
 const pct = (v: number | null) => (v === null ? "—" : `${(v * 100).toFixed(v < 0.1 ? 2 : 1)}%`);
@@ -73,20 +76,8 @@ export async function buildReport(client: PublicClient, token: Address, query: s
   // the deepest pools first, in dollars: anyone can open a tiny lopsided pool next to a token's real one, and a check
   // run on that pool would call a sound token a trap. Depth = the base side the pool's in-range liquidity holds now.
   if (v4Usable.length > 1) {
-    const usd = await ethUsd(client).catch(() => 0);
-    const depth = new Map<string, number>();
-    await Promise.all(
-      v4Usable.slice(0, 8).map(async (p) => {
-        const st = await v4State(client, p.id as `0x${string}`).catch(() => null);
-        if (!st) return depth.set(p.id, 0);
-        const s = Number(st.sqrt) / 2 ** 96, L = Number(st.liquidity);
-        const baseIs0 = p.key.currency1.toLowerCase() === token.toLowerCase();
-        const base = (baseIs0 ? p.key.currency0 : p.key.currency1).toLowerCase();
-        const raw = baseIs0 ? L / s : L * s;
-        depth.set(p.id, base === RH.USDG.toLowerCase() ? raw / 1e6 : (raw / 1e18) * usd);
-      }),
-    );
-    v4Usable.sort((a, b) => (depth.get(b.id) ?? -1) - (depth.get(a.id) ?? -1) || b.block - a.block);
+    const ranked = await rankV4ByDepth(client, token, v4Usable);
+    v4Usable.splice(0, v4Usable.length, ...ranked.map((r) => r.pool));
   }
 
   let sim: SimResult | null = null;
@@ -345,10 +336,16 @@ export async function buildReport(client: PublicClient, token: Address, query: s
       value: { launches: hist.launches, ...(hist.checked ? { drained: hist.dead / hist.checked } : {}) },
     });
 
+  // 7. launch-tax waivers: who the creator exempted in the launch transaction (a fact next to the score, not in it)
+  let waivers: Waivers | undefined;
+  const lt = isToken && !issuer && !stockIssued ? (index?.launchTx?.(token) ?? null) : null;
+  if (lt && read.totalSupply) waivers = (await readWaivers(client, lt.tx as `0x${string}`, token, read.totalSupply).catch(() => null)) ?? undefined;
+
   return {
     token,
     example: false,
     checks,
+    ...(waivers ? { waivers } : {}),
     meta: { symbol: read.symbol, name: read.name, venue: venueText, pool: wethPair?.pair ?? v4Native?.id ?? null, block: block.toString(), ms: Date.now() - t0 },
   };
 }

@@ -17,6 +17,9 @@ const ERC20 = [
 /** Blocks after the pool opened in which a buyer counts as a sniper (~30 s at ~12 blocks/s). */
 const SNIPE_BLOCKS = 360;
 
+/** A person's wallet that delegated to smart-account code (EIP-7702): its code is only 0xef0100 + the delegate's address. */
+export const isDelegatedWallet = (code: string) => /^0xef0100[0-9a-fA-F]{40}$/.test(code);
+
 export type HolderTag = "pool" | "burn" | "contract" | "creator" | "minted" | "sniper" | "bundle" | "fresh" | "whale" | "dolphin" | "fish";
 export interface Holder {
   address: string;
@@ -119,7 +122,7 @@ export async function readHolders(client: PublicClient, tokenIn: Address, opts: 
   const top20 = ranked.slice(0, 20);
   const txCounts = await Promise.all(top20.map(([a]) => (pools.has(a) || a === DEAD ? Promise.resolve(null) : client.getTransactionCount({ address: a as Address }).catch(() => null))));
   // a holder with code is a contract (a launch curve, a hook, a locker, a vault): its share is not one person's
-  const coded = new Set((await Promise.all(top20.map(([a]) => (pools.has(a) || a === DEAD ? Promise.resolve(null) : client.getCode({ address: a as Address }).then((c) => (c && c !== "0x" ? a : null)).catch(() => null))))).filter((x): x is string => !!x));
+  const coded = new Set((await Promise.all(top20.map(([a]) => (pools.has(a) || a === DEAD ? Promise.resolve(null) : client.getCode({ address: a as Address }).then((c) => (c && c !== "0x" && !isDelegatedWallet(c) ? a : null)).catch(() => null))))).filter((x): x is string => !!x));
   const creator = opts.creator?.toLowerCase() ?? null;
   const top: Holder[] = top20.map(([a, b], i) => {
     const share = sh(b), txs = txCounts[i] ?? null;

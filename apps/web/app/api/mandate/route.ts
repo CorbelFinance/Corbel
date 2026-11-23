@@ -1,6 +1,7 @@
-import { SCENARIOS, getClient, redact, runMandateLab } from "@corbel/data/chain";
+import { SCENARIOS, describeScenario, getClient, redact, runMandateLab } from "@corbel/data/chain";
 import { guardWait } from "@/lib/guard";
 import { readLog, recordRun } from "@/lib/labLog";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,7 +18,7 @@ async function handle(req: Request) {
   const u = new URL(req.url).searchParams;
   if (u.get("log") !== null) return Response.json(readLog() ?? { entries: [], totals: null });
   const id = u.get("s");
-  if (!id) return Response.json({ scenarios: SCENARIOS.map(({ id, repeat, day }) => ({ id, repeat, day })) });
+  if (!id) return Response.json({ scenarios: SCENARIOS.map(describeScenario) });
   if (!SCENARIOS.some((s) => s.id === id)) return Response.json({ error: "Unknown scenario." }, { status: 400 });
   const hit = cache.get(id);
   if (hit && Date.now() - hit.at < 20_000) return Response.json(hit.body);
@@ -44,7 +45,9 @@ export async function GET(req: Request) {
   const g = await guardWait(req, u.searchParams.has("s") ? "mandate" : "account");
   if ("blocked" in g) return g.blocked;
   try {
-    return await handle(req);
+    const res = await handle(req);
+    if (res.ok && u.searchParams.has("s")) award(req, "agents");
+    return res;
   } finally {
     g.release();
   }

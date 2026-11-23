@@ -1,3 +1,4 @@
+import { HELD } from "../flags";
 import { BRAND } from "../brand";
 import type { FactKey } from "../facts";
 import type { LayerId } from "../flags";
@@ -25,6 +26,9 @@ export interface Tab {
     | "stock-desk"
     | "loan-calc"
     | "decision-log"
+    | "agent-versus"
+    | "fair-launch"
+    | "address-check"
     | "steps"
     | "empty-balance"
     | "risk-matrix"
@@ -212,6 +216,8 @@ export const LAYERS: Layer[] = [
         body: ["Paste a wallet: every token it launched on Robinhood Chain and what became of each."],
         widget: "creator-dossier",
       },
+      { id: "address", label: "Address", body: ["Paste any address: a person, a contract or a relay, what it moved and who it moves with."], widget: "address-check" },
+      ...(HELD.fair ? [] : [{ id: "fair", label: "Fair launch", body: ["Paste a token: who made it, who was waived the launch fee, who holds it and who stayed."], widget: "fair-launch" } satisfies Tab]),
       {
         id: "api",
         label: "API",
@@ -412,6 +418,7 @@ export const LAYERS: Layer[] = [
         ],
         widget: "mandate-lab",
       },
+      { id: "versus", label: "Versus", step: "Two agents, one market", body: ["Two mandates on one market, run side by side by the real contract.", "See what each traded, what it refused and the bond it lost."], widget: "agent-versus" },
       {
         id: "league",
         label: "League",

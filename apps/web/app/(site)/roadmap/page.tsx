@@ -3,6 +3,7 @@ import { cx } from "@corbel/ui";
 import { NavIcon } from "@/components/app/NavIcon";
 import { RoadIcon } from "@/components/site/RoadIcon";
 import { WishForm } from "@/components/site/WishForm";
+import { HolderVote } from "@/components/site/HolderVote";
 
 export const metadata = { title: "Roadmap", description: "What works in Corbel today, what is being built and what comes after, block by block. Tell us what to build next." };
 
@@ -171,6 +172,8 @@ export default function Roadmap() {
           );
         })}
       </div>
+
+      <HolderVote />
 
       <section id="wish" aria-labelledby="h-wish" className="mt-24 scroll-mt-28 grid gap-8 lg:grid-cols-[17rem_minmax(0,1fr)]">
         <header>

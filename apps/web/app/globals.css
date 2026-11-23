@@ -2897,3 +2897,10 @@ html .divide-\[\#16201b\]:not(.ai-zone *) > :not(:last-child) { border-color: #1
 
 /* long unbroken strings (addresses, function signatures, URLs) wrap instead of widening the page on phones */
 .docs-prose { overflow-wrap: anywhere; }
+
+/* Overview wears every tool's colour at once: the roadmap block tones in one gradient (config ROAD_BLOCKS) */
+.tone-mix { background: linear-gradient(90deg, #2fbf72, #6fe7a8, #6f8dff, #9b86e4, #d946ef, #ff7aa8, #ff9a5c, #f4c152); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.mix-ico { stroke: url(#tone-mix); }
+/* the Overview card's frame: the same mix of every tool's colour, dimmed like the other layer cards, full on hover */
+.mix-border { border-color: transparent; background: linear-gradient(var(--surface, #111), var(--surface, #111)) padding-box, linear-gradient(90deg, #2fbf72aa, #6fe7a8aa, #6f8dffaa, #9b86e4aa, #d946efaa, #ff7aa8aa, #ff9a5caa, #f4c152aa) border-box; }
+.mix-border:hover { background: linear-gradient(var(--surface, #111), var(--surface, #111)) padding-box, linear-gradient(90deg, #2fbf72, #6fe7a8, #6f8dff, #9b86e4, #d946ef, #ff7aa8, #ff9a5c, #f4c152) border-box; }

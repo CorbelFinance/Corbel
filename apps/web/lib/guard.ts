@@ -7,7 +7,20 @@
  * Nothing is stored beyond memory, and IPs are hashed with a per-process random salt (never logged).
  */
 import { createHash, randomBytes } from "node:crypto";
-import { API_KEYS, keyOf } from "./apikeys";
+import { API_KEYS, keyOf, keyOwner } from "./apikeys";
+import { tierOf } from "./tiers";
+
+/** A key's lift by its owner's tier: the key's own boost times the tier's (Light 1, Plus 2, Full 5, Core 10), read once a minute. */
+const lifts = new Map<string, { at: number; v: number }>();
+function liftOf(hash: string): number {
+  const hit = lifts.get(hash);
+  if (hit && Date.now() - hit.at < 60_000) return hit.v;
+  const owner = keyOwner(hash);
+  const v = API_KEYS.boost * (tierOf(owner)?.apiBoost ?? 1);
+  if (lifts.size > 2000) lifts.clear();
+  lifts.set(hash, { at: Date.now(), v });
+  return v;
+}
 
 type Bucket = { tokens: number; at: number };
 const G = globalThis as unknown as { __corbelGuard?: { buckets: Map<string, Bucket>; running: Map<string, number>; salt: string } };
@@ -71,11 +84,12 @@ export function guard(req: Request, route: keyof typeof RULES): { blocked: Respo
   const base = RULES[route]!;
   const now = Date.now();
   sweep(now);
-  // a holder's API key lifts the limit API_KEYS.boost times, in its own bucket; the visitor's address keeps a bucket of
+  // a holder's API key lifts the limit by liftOf (the key boost times the owner's tier), in its own bucket; the visitor's address keeps a bucket of
   // the same lifted size too, so many keys used from one place never add up past it
   const k = keyOf(req);
   if (k === "over") return { blocked: Response.json({ error: `This key has used its ${API_KEYS.perDay} requests for today (UTC).` }, { status: 429, headers: { "retry-after": "3600" } }) };
-  const rule = k ? { ...base, perMin: base.perMin * API_KEYS.boost, burst: base.burst * API_KEYS.boost } : base;
+  const lift = k ? liftOf(k) : 1;
+  const rule = k ? { ...base, perMin: base.perMin * lift, burst: base.burst * lift } : base;
   const keys = k ? [`${route}:k${k.slice(0, 16)}`, `${route}:kip${clientKey(req)}`] : [`${route}:${clientKey(req)}`];
   const buckets = keys.map((key) => {
     const b = box.buckets.get(key) ?? { tokens: rule.burst, at: now };

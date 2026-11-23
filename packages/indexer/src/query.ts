@@ -120,6 +120,51 @@ export function launcherHistory(addr: string) {
   return { launches: r.n, dead: r.dead ?? 0, checked: r.checked ?? 0 };
 }
 
+/** The block a pool was created at, from the index; null when the pool is older than the index. */
+export function poolBlock(id: string): number | null {
+  const d = get();
+  if (!d) return null;
+  try {
+    const r = d.prepare(`SELECT block FROM pools WHERE id = ? LIMIT 1`).get(id.toLowerCase()) as { block: number } | undefined;
+    return r?.block ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** When a token first traded (its launch or its first pool, whichever is older) and its v2 pairs; null when unknown. */
+export function tokenBirth(token: string): { block: number; launchTx: string | null; pairs: string[] } | null {
+  const d = get();
+  if (!d) return null;
+  const t = token.toLowerCase();
+  try {
+    let launch: { block: number; tx: string | null } | undefined;
+    try {
+      launch = d.prepare(`SELECT block, tx FROM launches WHERE token = ? LIMIT 1`).get(t) as typeof launch;
+    } catch {
+      launch = undefined; // an index made before the launch watch
+    }
+    const pools = d.prepare(`SELECT id, kind, block FROM pools WHERE token0 = ? OR token1 = ?`).all(t, t) as { id: string; kind: string; block: number }[];
+    const blocks = [launch?.block, ...pools.map((p) => p.block)].filter((b): b is number => typeof b === "number");
+    if (!blocks.length) return null;
+    return { block: Math.min(...blocks), launchTx: launch?.tx ?? null, pairs: pools.filter((p) => p.kind === "v2").map((p) => p.id.toLowerCase()) };
+  } catch {
+    return null;
+  }
+}
+
+/** The launch transaction of a launchpad token (from the launch watch), or null. */
+export function launchTx(token: string): { tx: string; pad: string; block: number } | null {
+  const d = get();
+  if (!d) return null;
+  try {
+    const r = d.prepare(`SELECT tx, pad, block FROM launches WHERE token = ? LIMIT 1`).get(token.toLowerCase()) as { tx: string | null; pad: string; block: number } | undefined;
+    return r?.tx ? { tx: r.tx, pad: r.pad, block: r.block } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The wallet that created a launchpad token (from the launch watch), or null for a token not born on a launchpad. */
 export function launchCreator(token: string): string | null {
   const d = get();
@@ -157,6 +202,29 @@ export function sameTicker(symbol: string, exclude: string) {
     .prepare(`SELECT COUNT(*) AS n FROM tokens WHERE symbol = ? COLLATE NOCASE AND address <> ?`)
     .get(symbol, exclude.toLowerCase()) as { n: number };
   return r.n;
+}
+
+/**
+ * Copycats: tokens first seen at or after `sinceBlock` whose ticker an earlier token already used. Each row names the
+ * earliest token with that ticker ("first seen"), which is usually, not always, the original.
+ */
+export function copycats(sinceBlock: number, limit = 40) {
+  const d = get();
+  if (!d) return null;
+  return d
+    .prepare(
+      `WITH dup AS (
+         SELECT symbol COLLATE NOCASE AS s, COUNT(*) AS n, MIN(first_block) AS first
+         FROM tokens WHERE symbol IS NOT NULL AND symbol <> '' AND first_block IS NOT NULL
+         GROUP BY symbol COLLATE NOCASE HAVING COUNT(*) > 1)
+       SELECT t.address, t.symbol, t.name, t.first_block AS block, dup.n AS same,
+         (SELECT o.address FROM tokens o WHERE o.symbol = t.symbol COLLATE NOCASE AND o.first_block IS NOT NULL ORDER BY o.first_block ASC LIMIT 1) AS original,
+         (SELECT o.name FROM tokens o WHERE o.symbol = t.symbol COLLATE NOCASE AND o.first_block IS NOT NULL ORDER BY o.first_block ASC LIMIT 1) AS originalName
+       FROM tokens t JOIN dup ON t.symbol = dup.s COLLATE NOCASE
+       WHERE t.first_block >= ? AND t.first_block > dup.first
+       ORDER BY t.first_block DESC LIMIT ?`,
+    )
+    .all(sinceBlock, limit) as { address: string; symbol: string; name: string | null; block: number; same: number; original: string; originalName: string | null }[];
 }
 
 export function indexStatus() {
@@ -384,13 +452,13 @@ export function tokenMeta(address: string) {
   );
 }
 
-/** Launch analytics over the whole index window. Block heights become hours at ~4 blocks per second. */
-export function launchStats() {
+/** Launch analytics over the whole index window. Block heights become hours at `bph` blocks per hour (measured by the caller). */
+export function launchStats(bph = 31_320) {
   const d = get();
   if (!d) return null;
   const st = indexStatus()!;
   const head = st.high ?? 0;
-  const BPH = 14_400;
+  const BPH = bph;
   const hourly = d
     .prepare(
       `SELECT CAST((? - block) / ? AS INTEGER) AS h, kind, COUNT(*) AS n FROM pools WHERE block > ? GROUP BY h, kind`,
@@ -524,6 +592,15 @@ export function poolsTokens(ids: string[]) {
     });
   }
   return out;
+}
+
+/** Whether a token's liquidity was drained: true if any of its pools is dead, false if all are known alive, null if unknown. */
+export function tokenDrained(token: string): boolean | null {
+  const d = get();
+  if (!d) return null;
+  const r = d.prepare(`SELECT MAX(dead) AS dead, COUNT(dead) AS known FROM pools WHERE token0 = ? OR token1 = ?`).get(token.toLowerCase(), token.toLowerCase()) as { dead: number | null; known: number };
+  if (!r.known) return null;
+  return r.dead === 1;
 }
 
 /** A token's pools in the index: V2 pair addresses, its first pool's block and that pool's launcher. */
@@ -976,11 +1053,11 @@ export function survivalLeague(days = 7): { rows: LeagueRow[]; fromBlock: number
  * pool still trading or was its liquidity pulled. A launch is "drained" only when every pool of its token is marked
  * dead by the liveness rule; one pool checked live counts it as trading; pools not checked yet stay "unchecked". Whole history and the last 7 days, per launch pad.
  */
-export function launchOutcomes() {
+export function launchOutcomes(bph = 31_320) {
   const d = get();
   if (!d) return null;
   const head = indexStatus()?.high ?? 0;
-  const BPH = 14_400;
+  const BPH = bph;
   const pools = d.prepare(`SELECT token0, token1, dead FROM pools`).all() as { token0: string; token1: string; dead: number | null }[];
   // per token: how many pools, how many of them dead
   const byToken = new Map<string, { n: number; dead: number; unknown: number }>();

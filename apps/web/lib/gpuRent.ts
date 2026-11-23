@@ -1,8 +1,8 @@
 /**
- * Free GPU time for Full holders. The machine comes from lib/gpuProvider (GPU_ADAPTER); the holder gets a link
+ * Free GPU time by tier (Plus, Full, Core). The machine comes from lib/gpuProvider (GPU_ADAPTER); the holder gets a link
  * (GPU_GATE_URL/r/<token>/) and a password.
  *
- * Rules (GPU_FREE in config): Full holders only, one machine per wallet, GPU_FREE.minutesPerDay a day per wallet, all
+ * Rules (GPU_FREE in config): from the Plus tier, one machine per wallet, the tier's gpuMinutes a day per wallet, all
  * holders together at most GPU_FREE.budgetUsdDay a day (counted at the hour price of each machine), GPU_FREE.maxAtOnce
  * machines at once. Every machine has an end time; a sweep every 30 s stops what is due, and at start-up it stops any of
  * our machines the record does not know (a crash can never leave one running).
@@ -11,8 +11,13 @@ import { createHash, randomBytes } from "node:crypto";
 import { GPU_FREE, GPU_PAID } from "@corbel/config";
 import { getClient } from "@corbel/data/chain";
 import { gpuProvider, type GpuMachine } from "./gpuProvider";
-import { balance as creditBalance, charge, creditsOpen, MARKUP, refund } from "./credits";
+import { balance as creditBalance, charge, creditsOpen, refund } from "./credits";
 import { store } from "./store";
+import { tierOf } from "./tiers";
+import { markupOf } from "./markup";
+
+/** Free GPU minutes a day for this wallet, by its tier (Plus 10, Full 30, Core 60; none below). */
+export const freeMinutes = (owner: string) => tierOf(owner)?.gpuMinutes ?? 0;
 
 const PREFIX = "corbel-gpu-";
 /** The machine image (server env only: it would name the provider). Without it no machine starts. */
@@ -132,8 +137,8 @@ export function gpuState(owner: string | null): GpuState {
     choices: GPU_FREE.choices.map((c) => ({ id: c.id, label: c.label, vram: c.vram, line: c.line })),
     apps: GPU_FREE.apps.map((a) => ({ ...a })),
     soon: GPU_FREE.soon.map((c) => ({ ...c })),
-    minutesPerDay: GPU_FREE.minutesPerDay,
-    minutesLeft: o ? Math.max(0, Math.floor(GPU_FREE.minutesPerDay - usedMinutes(o))) : null,
+    minutesPerDay: o ? freeMinutes(o) : GPU_FREE.minutesPerDay,
+    minutesLeft: o ? Math.max(0, Math.floor(freeMinutes(o) - usedMinutes(o))) : null,
     budgetLeft: Math.max(0, Math.round((GPU_FREE.budgetUsdDay - spentToday()) * 100) / 100),
     busy: running().filter((r) => !r.paid).length >= GPU_FREE.maxAtOnce,
     active: a ? { id: a.id, gpu: GPU_FREE.choices.find((c) => c.id === a.gpu)?.label ?? a.gpu, app: appOf(a.app).label, started: a.started, ends: a.ends, status: a.status, access: a.status === "running" ? gate(a.token) : null, password: a.pass, paid: !!a.paid } : null,
@@ -143,7 +148,7 @@ export function gpuState(owner: string | null): GpuState {
       open: gpuOpen() && creditsOpen(),
       balance: o && creditsOpen() ? creditBalance(o).balance : null,
       minutes: GPU_PAID.minutes,
-      hourly: Object.fromEntries(GPU_FREE.choices.map((c) => [c.id, Math.round(c.maxHourly * (1 + MARKUP) * 100) / 100])),
+      hourly: Object.fromEntries(GPU_FREE.choices.map((c) => [c.id, Math.round(c.maxHourly * (1 + markupOf(o)) * 100) / 100])),
     },
   };
 }
@@ -236,12 +241,14 @@ export async function startGpu(owner: string, gpuId: string, agreed = false, app
     if (!(GPU_PAID.minutes as readonly number[]).includes(paid.minutes)) return "Pick one of the times listed.";
     if (running().filter((r) => r.paid).length >= GPU_PAID.maxAtOnce) return "All paid machines are in use. Try again in a few minutes.";
     left = paid.minutes;
-    reserve = Math.round(c.maxHourly * (1 + MARKUP) * (left / 60) * 100) / 100;
+    reserve = Math.round(c.maxHourly * (1 + markupOf(o)) * (left / 60) * 100) / 100;
     if (creditBalance(o).balance < reserve) return `This needs $${reserve.toFixed(2)} of Credits. Top up first.`;
   } else {
     if (startsToday(o) >= GPU_FREE.startsPerDay) return `That was today's ${GPU_FREE.startsPerDay} starts. They come back at 00:00 UTC.`;
-    left = GPU_FREE.minutesPerDay - usedMinutes(o);
-    if (left < 5) return `That was today's ${GPU_FREE.minutesPerDay} minutes. They come back at 00:00 UTC.`;
+    const mine = freeMinutes(o);
+    if (!mine) return "Free GPU time opens at the Plus tier.";
+    left = mine - usedMinutes(o);
+    if (left < 5) return `That was today's ${mine} minutes. They come back at 00:00 UTC.`;
     if (running().filter((r) => !r.paid).length >= GPU_FREE.maxAtOnce) return "All free machines are in use. Try again in a few minutes.";
     // the whole remaining time is reserved against the day's budget before anything starts
     const cost = (c.maxHourly * left) / 60;
@@ -315,7 +322,7 @@ async function halt(r: Row, why: string) {
     await note(r.id, `${why}; the machine and its disk are gone`);
     // paid: the time from ready to stop at the machine's hourly price plus the markup; the rest of the reserve goes back
     if (r.paid && r.reserve) {
-      const used = r.status === "running" ? Math.max(0, (at - r.started) / 3_600_000) * r.hourly * (1 + MARKUP) : 0;
+      const used = r.status === "running" ? Math.max(0, (at - r.started) / 3_600_000) * r.hourly * (1 + markupOf(r.owner)) : 0;
       const cost = Math.min(r.reserve, Math.round(used * 100) / 100);
       refund(r.owner, r.reserve - cost, `back ${r.id.slice(0, 8)}`);
       await note(r.id, `Charged $${cost.toFixed(2)} for the time used; $${(r.reserve - cost).toFixed(2)} back to Credits`);

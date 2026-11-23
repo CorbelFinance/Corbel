@@ -137,7 +137,8 @@ const VERDICT_TONE = {
  * The first block of a page: the answer to the page's question in one sentence, one number that carries it, and the
  * other figures as a single mono line. Colour is meaning: good green, danger red, caution amber, information grey.
  */
-export function Verdict({ kicker, tone = "info", value, valueLabel, facts, visual, children }: { kicker: string; tone?: keyof typeof VERDICT_TONE; value: ReactNode; valueLabel?: string; facts?: [string, ReactNode][]; visual?: ReactNode; children: ReactNode }) {
+/** `source`: where the main figure was read and when, e.g. "chain · block 120,743,394" (shown under the figure). */
+export function Verdict({ kicker, tone = "info", value, valueLabel, source, facts, visual, children }: { kicker: string; tone?: keyof typeof VERDICT_TONE; value: ReactNode; valueLabel?: string; source?: string; facts?: [string, ReactNode][]; visual?: ReactNode; children: ReactNode }) {
   const c = VERDICT_TONE[tone];
   // a fact with no value is left out, never shown as a dash
   facts = facts?.filter(([, v]) => v != null && v !== "" && v !== "—");
@@ -154,6 +155,7 @@ export function Verdict({ kicker, tone = "info", value, valueLabel, facts, visua
         <div className="lg:text-right">
           <p className={cx("font-display text-[clamp(3rem,2rem+3vw,5.2rem)] leading-none tabular-nums tracking-tight", c.text)}>{value}</p>
           {valueLabel && <p className="mt-2 text-[14px] text-muted">{valueLabel}</p>}
+          {source && <p className="mt-1.5 font-mono text-[12.5px] text-muted">{source}</p>}
         </div>
       </div>
       {visual && <div className="px-6 pb-2 sm:px-8">{visual}</div>}

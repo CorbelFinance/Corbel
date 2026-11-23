@@ -1,4 +1,10 @@
+import { PredictLive } from "@/components/app/PredictLive";
+import { PredictPositions } from "@/components/app/PredictPositions";
 import { PredictRounds } from "@/components/app/PredictRounds";
+import { PredictTestDesk } from "@/components/app/PredictTestDesk";
+
+// the live markets open only where PREDICT_OPEN=1 (localhost testing); the public page stays a preview until the owner opens it
+export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Predict · soon", description: "Markets the chain settles: whether a pool keeps its liquidity, and short up or down rounds. Opening soon." };
 
@@ -13,6 +19,13 @@ export default function PredictPage() {
       <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted">
         Markets the chain settles, with nobody voting: whether a pool keeps its liquidity, and short up or down rounds on a price. Not open yet. Below is a preview with the live price; nothing here takes a stake.
       </p>
+      {process.env.PREDICT_OPEN === "1" && (
+        <div className="mt-10 space-y-6">
+          <PredictTestDesk />
+          <PredictPositions />
+          <PredictLive />
+        </div>
+      )}
       <h2 id="rounds" className="mt-12 scroll-mt-24 font-display text-3xl tracking-tight">
         Rounds: up or down in minutes
       </h2>

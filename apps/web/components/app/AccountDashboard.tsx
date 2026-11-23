@@ -194,6 +194,7 @@ export function AccountDashboard() {
           tone={lp && lp.feesDay > 0 ? "good" : "info"}
           value={usd(net)}
           valueLabel="net worth, tokens and pool shares"
+          source={quick?.block ? `chain · block ${Number(quick.block).toLocaleString("en-US")}` : undefined}
           facts={[
             ["In tokens", usd(held)],
             ["In pools", lp ? usd(pools) : "reading"],

@@ -43,8 +43,48 @@ export function TrustApi() {
   return (
     <div className="space-y-6">
       <Console />
+      <Downloads />
       <Keys />
     </div>
+  );
+}
+
+/** The index as files: the pools and launches our pages read, for a chosen window. No key needed. */
+/** the download route's row cap (app/api/download) */
+const MAX_ROWS = 20_000;
+
+function Downloads() {
+  const [days, setDays] = useState(1);
+  const sets = [
+    ["pools", "Pools", "Every new pool: DEX, token, base, block, creating contract, hook, drained or not."],
+    ["launches", "Launches", "Every token born on a launchpad: launchpad, block, transaction, creator, pooled yet."],
+  ] as const;
+  return (
+    <Instrument code="X-03" title="Data downloads" status={<Led tone="on" label="No key needed" />} foot={<span>{`The same index our pages read. Newest first, up to ${MAX_ROWS.toLocaleString("en-US")} rows; each file names the last block it covers.`}</span>}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-bg px-5 py-3">
+        <span className="text-[13px] text-muted">Window</span>
+        {[1, 7, 30].map((d) => (
+          <button key={d} type="button" aria-pressed={days === d} onClick={() => setDays(d)} className={cx("rounded-lg border px-3 py-1 font-mono text-[13px]", days === d ? "border-leaf text-text" : "border-line text-muted hover:text-text")}>
+            {d === 1 ? "1 day" : `${d} days`}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-px bg-line md:grid-cols-2">
+        {sets.map(([id, name, line]) => (
+          <div key={id} className="space-y-3 bg-bg px-5 py-4">
+            <p className="text-[15px] font-semibold text-text">{name}</p>
+            <p className="text-[13.5px] text-muted">{line}</p>
+            <div className="flex gap-2">
+              {(["csv", "json"] as const).map((f) => (
+                <a key={f} href={`/api/download?set=${id}&days=${days}&format=${f}`} download className="rounded-lg border border-line px-3 py-1.5 font-mono text-[13px] text-text hover:border-leaf">
+                  {f.toUpperCase()} ↓
+                </a>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Instrument>
   );
 }
 
@@ -175,7 +215,7 @@ function Console() {
 
 
 type KeyRow = { id: string; label: string; tail: string; created: number; last: number | null; usesToday: number };
-type KeysState = { signedIn: boolean; holder: boolean; need: number; holdDays: number; limits: { maxKeys: number; boost: number; perDay: number }; keys: KeyRow[] };
+type KeysState = { signedIn: boolean; holder: boolean; tier?: string | null; need: number; holdDays: number; limits: { maxKeys: number; boost: number; perDay: number }; keys: KeyRow[] };
 
 /** API keys for holders: make one (shown once), see today's use, revoke. */
 function Keys() {
@@ -223,7 +263,7 @@ function Keys() {
       <div className="grid gap-px bg-line md:grid-cols-3">
         {[
           ["Without a key", "Per-minute limits per visitor"],
-          ["With a key", lim ? `${lim.boost}× those limits` : "—"],
+          ["With a key", lim ? `${lim.boost}× those limits${st?.tier ? `, by your ${st.tier} tier` : ""}` : "—"],
           ["Daily cap per key", lim ? `${lim.perDay.toLocaleString("en-US")} requests` : "—"],
         ].map(([k, v]) => (
           <div key={k} className="bg-bg px-5 py-4">

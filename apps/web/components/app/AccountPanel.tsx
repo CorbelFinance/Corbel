@@ -7,6 +7,7 @@ import { Idle, Instrument, Led, Seg, short } from "./kit";
 import { useSession } from "./session";
 import { SignInRow, useLinked } from "./wallet";
 import { setWatch, useWatch } from "./WatchButton";
+import { WatchAlerts } from "./WatchAlerts";
 
 type Live = { verdict?: { pass: number; warn: number; fail: number }; price?: number | null; eth?: string; usdg?: string; err?: boolean };
 
@@ -162,6 +163,7 @@ export function AccountPanel() {
               ))}
             </ul>
           )}
+          <WatchAlerts />
           <div className="flex items-center justify-between border-t border-line px-4 py-3">
             <span className="font-medium text-[12px] uppercase tracking-[0.08em] text-muted">{items ? `${items.length} / 50 saved` : ""}</span>
             <button type="button" className="ibtn-ghost h-8" onClick={() => void auth.signOut()}>

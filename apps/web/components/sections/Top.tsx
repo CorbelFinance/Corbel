@@ -1,4 +1,4 @@
-import { FACTS, FLAGS, HERO, LAYERS, LAYERS_SECTION, MANIFESTO, MARQUEE_FALLBACK, type LayerId } from "@corbel/config";
+import { FACTS, FLAGS, HERO, LAYERS, LAYER_TONE, inAppOrder, LAYERS_SECTION, MANIFESTO, MARQUEE_FALLBACK, type LayerId } from "@corbel/config";
 import { TokenRange } from "./TokenRange";
 import { LaunchTape } from "./LaunchTape";
 import { LivePulse } from "./LivePulse";
@@ -38,7 +38,7 @@ export function Hero() {
           <h1 className="font-display pointer-events-auto text-[clamp(2.6rem,0.6rem+6vw,7rem)] leading-[0.95] text-text [text-shadow:0_0_40px_var(--bg)]">
             <span className="hero-line md:whitespace-nowrap">
               <span>
-                <em className="not-italic text-[#6fe7a8]">Check.</em> Swap. Earn.
+                <em className="not-italic text-[#6fe7a8]">Check.</em> <em className="not-italic text-[#2fbf72]">Swap.</em> <em className="not-italic text-[#f4c152]">Earn.</em>
               </span>
             </span>
             <span className="hero-line pb-[0.08em] md:whitespace-nowrap">
@@ -52,7 +52,7 @@ export function Hero() {
             <AskBar />
           </div>
           <div className="hero-after pointer-events-auto mt-10 flex flex-wrap justify-center gap-3">
-            <Button href={HERO.primary.href}>{HERO.primary.label}</Button>
+            <Button href={HERO.primary.href} className="!bg-[#42ee8f] !text-[#0b0b0b] hover:!bg-text">{HERO.primary.label}</Button>
             <Button href={HERO.secondary.href} variant="ghost">
               {HERO.secondary.label}
             </Button>
@@ -138,9 +138,9 @@ export function Layers() {
         <p className="self-end text-muted lg:col-span-4">{LAYERS_SECTION.sub}</p>
       </div>
       <ul data-stagger className="frames mt-12 grid sm:grid-cols-2 lg:grid-cols-4">
-        {LAYERS.map((l, i) => (
-          // Agents wear the violet of the agent lines in the hero scene, as AI wears orange
-          <li key={l.id} data-chain-node="" className="frame" style={l.id === "agents" ? ({ "--leaf": "#9b86e4", "--ui": "#9b86e4" } as React.CSSProperties) : l.id === "trade" ? ({ "--leaf": "#3ddc84", "--ui": "#3ddc84" } as React.CSSProperties) : undefined}>
+        {inAppOrder(LAYERS).map((l, i) => (
+          // every layer wears its roadmap block colour (config LAYER_TONE)
+          <li key={l.id} data-chain-node="" className="frame" style={LAYER_TONE[l.id] ? ({ "--leaf": LAYER_TONE[l.id], "--ui": LAYER_TONE[l.id] } as React.CSSProperties) : undefined}>
             <span aria-hidden className="fr-sq tl" />
             <span aria-hidden className="fr-sq tr" />
             <span aria-hidden className="fr-sq bl" />
@@ -162,11 +162,11 @@ export function Layers() {
               </div>
               <div className="flex flex-1 flex-col">
               <div className="mt-6 flex items-start justify-between gap-4">
-                <h3 className={cx("font-display text-[2.1rem] leading-[1.02] tracking-tight lg:text-[1.75rem] 2xl:text-[2.1rem]", l.id === "agents" && "text-[#9b86e4]", l.id === "trust" && "text-leaf", l.id === "trade" && "text-[#3ddc84]")}>
+                <h3 className="font-display text-[2.1rem] leading-[1.02] tracking-tight lg:text-[1.75rem] 2xl:text-[2.1rem]" style={{ color: LAYER_TONE[l.id] }}>
                   {l.name}
                   {l.brand && <span className="ml-3 align-middle font-mono text-[12px] uppercase tracking-[0.1em] text-muted">{`${l.brand} · soon`}</span>}
                 </h3>
-                <span className="mt-1 border border-leaf/50 px-1.5 py-0.5 font-mono text-[12px] tracking-[0.08em] text-leaf">[{l.num}]</span>
+                <span className="mt-1 border border-leaf/50 px-1.5 py-0.5 font-mono text-[12px] tracking-[0.08em] text-leaf">[{String(i + 1).padStart(3, "0")}]</span>
               </div>
               <p className="mt-3 max-w-xs text-sm text-muted">{l.line}</p>
               <div className="mt-auto flex items-center justify-between pt-8">
@@ -179,7 +179,7 @@ export function Layers() {
             </a>
           </li>
         ))}
-        <li data-chain-node="" className="frame">
+        <li data-chain-node="" className="frame" style={{ ["--leaf" as string]: "#ff9a5c", ["--ui" as string]: "#ff9a5c" }}>
           <span aria-hidden className="fr-sq tl" />
           <span aria-hidden className="fr-sq tr" />
           <span aria-hidden className="fr-sq bl" />

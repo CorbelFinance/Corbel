@@ -40,3 +40,38 @@ export function addWatch(owner: string, kind: string, value: string, label: stri
 export function removeWatch(owner: string, value: string) {
   db()?.prepare("DELETE FROM watch WHERE owner = ? AND lower(value) = ?").run(owner.toLowerCase(), value.toLowerCase());
 }
+
+/** Every distinct token on anyone's watchlist, most watched first, with how many wallets follow it. */
+export function watchedTokens(limit = 60): { token: string; label: string; watchers: number }[] {
+  const d = db();
+  if (!d) return [];
+  return d.prepare("SELECT value AS token, MAX(label) AS label, COUNT(*) AS watchers FROM watch WHERE kind = 'token' GROUP BY value ORDER BY watchers DESC LIMIT ?").all(limit) as { token: string; label: string; watchers: number }[];
+}
+
+/** The tokens one wallet watches (for its alert feed). */
+export function watchedBy(owner: string): string[] {
+  return (listWatch(owner) ?? []).filter((i) => i.kind === "token").map((i) => i.value.toLowerCase());
+}
+
+/** Every distinct wallet on anyone's watchlist (for the drain alarm). */
+export function watchedAddresses(limit = 60): string[] {
+  const d = db();
+  if (!d) return [];
+  return (d.prepare("SELECT value FROM watch WHERE kind = 'address' GROUP BY value ORDER BY COUNT(*) DESC LIMIT ?").all(limit) as { value: string }[]).map((r) => r.value.toLowerCase());
+}
+
+/** The wallets one owner watches. */
+export function walletsWatchedBy(owner: string): string[] {
+  return (listWatch(owner) ?? []).filter((i) => i.kind === "address").map((i) => i.value.toLowerCase());
+}
+
+/** Who watches this token or wallet, with each owner's position in their own list (oldest first), for alert limits. */
+export function watchersOf(value: string): { owner: string; rank: number }[] {
+  const d = db();
+  if (!d) return [];
+  const owners = d.prepare("SELECT owner, kind FROM watch WHERE lower(value) = ?").all(value.toLowerCase()) as { owner: string; kind: string }[];
+  return owners.map((o) => {
+    const r = d.prepare("SELECT COUNT(*) AS n FROM watch WHERE owner = ? AND kind = ? AND added < (SELECT added FROM watch WHERE owner = ? AND lower(value) = ?)").get(o.owner, o.kind, o.owner, value.toLowerCase()) as { n: number };
+    return { owner: o.owner, rank: r.n };
+  });
+}

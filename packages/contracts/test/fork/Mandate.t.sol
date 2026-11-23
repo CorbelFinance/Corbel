@@ -137,6 +137,71 @@ contract MandateForkTest is Base {
         eq(m.strikes(), 0, "no strike");
     }
 
+    function _fundWeth() internal {
+        vm.deal(owner, 1 ether);
+        vm.startPrank(owner);
+        IWETH(WETH).deposit{value: 1 ether}();
+        IERC20Min(WETH).transfer(address(m), 1 ether);
+        vm.stopPrank();
+    }
+
+    function test_totalBudgetStopsTheTradeThatWouldPassIt() public {
+        _fundWeth();
+        vm.prank(owner);
+        m.setTotal(WETH, 0.3 ether);
+        address[] memory p = new address[](2);
+        p[0] = WETH;
+        p[1] = USDG;
+        uint256 q = ROUTER.getAmountsOut(0.2 ether, p)[1];
+        vm.prank(agent);
+        (bool first,) = m.tradeV2(p, 0.2 ether, (q * 9_950) / 10_000, "first");
+        ok(first, "within the total");
+        eq(m.spentTotal(WETH), 0.2 ether, "spent counted");
+        eq(uint256(m.check(WETH, USDG, 0.2 ether)), uint256(CorbelMandate.Rule.Budget), "the next one passes the total");
+        vm.warp(block.timestamp + 1 days); // a new day does not refill a total
+        eq(uint256(m.check(WETH, USDG, 0.2 ether)), uint256(CorbelMandate.Rule.Budget), "still over the total");
+    }
+
+    function test_endDateClosesTheMandateAndIsCappedAtNinetyDays() public {
+        vm.startPrank(owner);
+        vm.expectRevert(bytes("term"));
+        m.setEnd(block.timestamp + 91 days);
+        m.setEnd(block.timestamp + 2 days);
+        vm.stopPrank();
+        eq(uint256(m.check(WETH, USDG, 0.1 ether)), uint256(CorbelMandate.Rule.None), "open before the end");
+        vm.warp(block.timestamp + 2 days);
+        eq(uint256(m.check(WETH, USDG, 0.1 ether)), uint256(CorbelMandate.Rule.Window), "closed at the end");
+    }
+
+    function _signScore(uint256 pk, address token, uint8 score, uint64 at) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", m.SCORE_DOMAIN(), keccak256(abi.encode(m.SCORE_TYPEHASH(), token, score, at))));
+        (v, r, s) = vm.sign(pk, digest);
+    }
+
+    function test_scoreRuleNeedsAFreshSignedScoreAtTheLine() public {
+        uint256 pk = 0xC0B;
+        address scorer = vm.addr(pk);
+        vm.prank(owner);
+        m.setScoreRule(scorer, 70);
+        eq(uint256(m.check(USDG, NVDA, 100e6)), uint256(CorbelMandate.Rule.Score), "no score: refused");
+        eq(uint256(m.check(NVDA, USDG, 1e18)), uint256(CorbelMandate.Rule.None), "selling into USDG needs no score");
+
+        (uint8 v, bytes32 r, bytes32 s) = _signScore(pk, NVDA, 80, uint64(block.timestamp));
+        m.submitScore(NVDA, 80, uint64(block.timestamp), v, r, s);
+        eq(uint256(m.check(USDG, NVDA, 100e6)), uint256(CorbelMandate.Rule.None), "fresh 80 at line 70: allowed");
+
+        vm.warp(block.timestamp + 11 minutes);
+        eq(uint256(m.check(USDG, NVDA, 100e6)), uint256(CorbelMandate.Rule.Score), "older than 10 minutes: refused");
+
+        (v, r, s) = _signScore(pk, NVDA, 60, uint64(block.timestamp));
+        m.submitScore(NVDA, 60, uint64(block.timestamp), v, r, s);
+        eq(uint256(m.check(USDG, NVDA, 100e6)), uint256(CorbelMandate.Rule.Score), "fresh 60 under the line: refused");
+
+        (v, r, s) = _signScore(0xBAD, NVDA, 99, uint64(block.timestamp));
+        vm.expectRevert(bytes("signer"));
+        m.submitScore(NVDA, 99, uint64(block.timestamp), v, r, s);
+    }
+
     function test_priceRuleSlashesALooseMinOut() public {
         vm.deal(owner, 1 ether);
         vm.startPrank(owner);
@@ -152,6 +217,7 @@ contract MandateForkTest is Base {
         eq(m.strikes(), 1, "strike");
         eq(m.bond(), 450e6, "slashed");
         eq(m.spentOnDay(WETH, block.timestamp / 1 days), 0, "budget not consumed by a refused trade");
+        eq(m.spentTotal(WETH), 0, "lifetime cap not consumed by a refused trade either");
     }
 
     function test_poolFeeAboveOnePercentIsAViolation() public {

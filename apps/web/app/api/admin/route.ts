@@ -8,6 +8,7 @@ import { allLimits, limit, setLimit } from "@/lib/limits";
 import { report } from "@/lib/stats";
 import { sameOrigin } from "@/lib/auth";
 import { listSignups } from "@/lib/signups";
+import { audit } from "@/lib/points";
 import { listMessages, setDone } from "@/lib/support";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +71,8 @@ export async function GET(req: Request) {
           jobs24h: jobs,
         },
         stats: report(14),
-        signups: listSignups(),
+        signups: listSignups(5000),
+        rewards: audit(),
         support: listMessages(),
         limits: allLimits(),
         earn: earn.map((r) => ({ pair: r.pair, symbol: r.symbol, liquidity: r.liquidity, days: covered(r.pair) })),

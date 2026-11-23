@@ -1,6 +1,7 @@
 import { sameOrigin, session } from "@/lib/auth";
 import { guardWait } from "@/lib/guard";
 import { store } from "@/lib/store";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -31,6 +32,7 @@ export async function PUT(req: Request) {
     const j = JSON.parse(text) as { book?: { v?: number; trades?: unknown[] } };
     if (!j.book || j.book.v !== 1 || !Array.isArray(j.book.trades) || j.book.trades.length > 2000) return Response.json({ error: "Not a practice account." }, { status: 400 });
     db()?.prepare("INSERT INTO books (wallet, book, updated) VALUES (?, ?, ?) ON CONFLICT(wallet) DO UPDATE SET book = excluded.book, updated = excluded.updated").run(s.address.toLowerCase(), JSON.stringify(j.book), Date.now());
+    award(req, "paper");
     return Response.json({ ok: true });
   } catch {
     return Response.json({ error: "Could not read the practice account." }, { status: 400 });

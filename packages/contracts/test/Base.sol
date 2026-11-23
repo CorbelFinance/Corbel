@@ -12,6 +12,7 @@ interface Vm {
     function expectRevert() external;
     function label(address who, string calldata name) external;
     function addr(uint256 pk) external returns (address);
+    function sign(uint256 pk, bytes32 digest) external pure returns (uint8 v, bytes32 r, bytes32 s);
 }
 
 abstract contract Base {

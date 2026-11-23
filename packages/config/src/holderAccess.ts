@@ -65,13 +65,13 @@ export function dailyCredits(weights: number[], dailyPool: number, capPerWallet:
 }
 
 /**
- * AI access by holding (two groups since 2026-11-20), replacing the pooled formula above for the chat. Two tiers by coins held,
+ * AI access by holding (four tiers since 2026-11-23, two before), replacing the pooled formula above. Tiers by coins held,
  * where "held" is the lowest balance over the last `holdDays` days, so coins moved from wallet to wallet or borrowed for
  * a minute do not count. Wallets found to belong to one person share one tier's limits. Counts reset 00:00 UTC.
  * `cap` is the most a wallet may spend a day in generation credits, whatever the counts allow.
  */
 export type AiTier = {
-  id: "light" | "full";
+  id: "light" | "plus" | "full" | "core";
   name: string;
   minCoins: number;
   text: number;
@@ -84,18 +84,40 @@ export type AiTier = {
   cap: number;
   models: string;
   quality: string;
+  /** what Credits add on top of the list price for this tier, 0..1 (the base is CREDITS_MARKUP) */
+  markup: number;
+  /** free GPU minutes a day (0 = none) */
+  gpuMinutes: number;
+  /** multiplier on the per-minute API limits */
+  apiBoost: number;
+  /** tokens followed with Telegram alerts; null = no limit */
+  alerts: number | null;
+  /** what else this tier opens, in one line */
+  extra: string;
 };
+/** What Credits add on top of the list price for a wallet with no tier. */
+export const CREDITS_MARKUP = 0.1;
 /** Models open to Full holders across text, pictures, video, voice and music: the one number every page uses. */
 export const FULL_MODELS = 185;
 
 export const AI_ACCESS = {
   holdDays: 7,
   lightShare: 0.3,
+  // thresholds for Plus and Core are a proposal (sprint plan, round 4) until the owner sets them
   tiers: [
-    { id: "light", name: "Light", minCoins: 1_000, text: 50, chars: 4000, image: 5, video: 2, voice: 5, music: 0, upscale: 0, cap: 10, models: "Selected fast models in standard quality: lighter pictures, short video and voice", quality: "Standard" },
-    { id: "full", name: "Full", minCoins: 1_000_000, text: 150, chars: 8000, image: 20, video: 3, voice: 20, music: 2, upscale: 3, cap: 40, models: `All ${FULL_MODELS} models at full quality: every picture, video, voice, music and upscale model`, quality: "Full" },
+    { id: "light", name: "Light", minCoins: 1_000, text: 50, chars: 4000, image: 5, video: 2, voice: 5, music: 0, upscale: 0, cap: 10, models: "Selected fast models in standard quality: lighter pictures, short video and voice", quality: "Standard", markup: 0.1, gpuMinutes: 0, apiBoost: 1, alerts: 3, extra: "Holder card" },
+    { id: "plus", name: "Plus", minCoins: 100_000, text: 100, chars: 6000, image: 10, video: 2, voice: 10, music: 1, upscale: 1, cap: 20, models: "More models than Light in standard quality, music and upscale included", quality: "Standard", markup: 0.05, gpuMinutes: 10, apiBoost: 2, alerts: 20, extra: "Linked-wallet map" },
+    { id: "full", name: "Full", minCoins: 1_000_000, text: 150, chars: 8000, image: 20, video: 3, voice: 20, music: 2, upscale: 3, cap: 40, models: `All ${FULL_MODELS} models at full quality: every picture, video, voice, music and upscale model`, quality: "Full", markup: 0, gpuMinutes: 30, apiBoost: 5, alerts: 100, extra: "Your Telegram alert fires first" },
+    { id: "core", name: "Core", minCoins: 10_000_000, text: 150, chars: 8000, image: 20, video: 3, voice: 20, music: 2, upscale: 3, cap: 40, models: `All ${FULL_MODELS} models at full quality, first in the queue`, quality: "Full", markup: 0, gpuMinutes: 60, apiBoost: 10, alerts: null, extra: "First in the queue for models and GPUs" },
   ] as AiTier[],
 };
+
+/** The tier that opens every model; every tier above it keeps that. */
+export const FULL_TIER = AI_ACCESS.tiers.find((t) => t.id === "full")!;
+/** True for Full and every tier above it. */
+export const hasFull = (t: AiTier | null | undefined) => !!t && t.minCoins >= FULL_TIER.minCoins;
+/** What Credits add for this tier (the base markup without one). */
+export const markupFor = (t: AiTier | null | undefined) => t?.markup ?? CREDITS_MARKUP;
 
 /** The tier for a balance held through the whole window (the lowest balance of the last `holdDays` days). */
 export function aiTier(heldCoins: number): AiTier | null {

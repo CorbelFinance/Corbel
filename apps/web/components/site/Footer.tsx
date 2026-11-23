@@ -19,11 +19,11 @@ export function Footer() {
             <div className="grid gap-10 sm:grid-cols-[1.3fr_1fr_1fr]">
               <div>
                 <p className="font-display text-3xl leading-[1.05] tracking-tight">
-                  Check.
+                  <span className="text-[#6fe7a8]">Check.</span>
                   <br />
-                  Swap.
+                  <span className="text-[#2fbf72]">Swap.</span>
                   <br />
-                  <span className="text-leaf">Earn.</span>
+                  <span className="text-[#f4c152]">Earn.</span>
                   <br />
                   <span className="text-[#9b86e4]">Agents.</span>
                   <br />

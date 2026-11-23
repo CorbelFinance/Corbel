@@ -29,6 +29,9 @@ const db = () =>
      CREATE TABLE IF NOT EXISTS verdicts (day TEXT NOT NULL, token TEXT NOT NULL, block TEXT, results TEXT NOT NULL, PRIMARY KEY (day, token));`,
   );
 
+/** The stats file with its schema, for modules that read the saved verdicts (lib/ledger). */
+export const statsStore = () => db();
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** The salt for wallet hashes: made once, kept only in this database, so a hash cannot be matched to an address elsewhere. */

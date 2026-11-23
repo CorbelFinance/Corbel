@@ -1,6 +1,7 @@
 import { NATIVE, RH, assetMeta, getClient, parseAddress, quote, redact, toRaw } from "@corbel/data/chain";
 import { ensureV4, v4PoolsBetween } from "@/lib/v4extra";
 import { guardWait } from "@/lib/guard";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -57,7 +58,9 @@ export async function GET(req: Request) {
   const g = await guardWait(req, "quote", 40_000);
   if ("blocked" in g) return g.blocked;
   try {
-    return await handle(req);
+    const res = await handle(req);
+    if (res.ok) award(req, "quote");
+    return res;
   } finally {
     g.release();
   }

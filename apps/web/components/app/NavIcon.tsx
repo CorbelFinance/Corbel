@@ -22,13 +22,15 @@ const P: Record<string, string> = {
   overview: "M4 16a8 8 0 1 1 16 0M12 16l4-5M6.5 16h0M17.5 16h0M12 8.5v0M4 20h16",
   // a grid of four
   tools: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+  // a clock over a gap: stock tokens that trade while the market is shut
+  stocks: "M12 12.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9ZM12 5.5V8l1.6 1.1M4 20l4-4 3 2 5-5M16 13h3v3",
   // pie
   portfolio: "M12 3v9h9a9 9 0 1 1-9-9Zm3-1a8 8 0 0 1 7 7h-7V2Z",
 };
 
-export function NavIcon({ id, className }: { id: string; className?: string }) {
+export function NavIcon({ id, className, style }: { id: string; className?: string; style?: React.CSSProperties }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden className={className} style={style}>
       <path d={P[id] ?? P.check} />
     </svg>
   );

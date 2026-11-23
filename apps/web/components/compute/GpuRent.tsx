@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AI & GPUs · free GPU time for Full holders. Pick a GPU, start it, open it through Corbel's own link with the password
+ * AI & GPUs · free GPU time by tier (Plus, Full, Core). Pick a GPU, start it, open it through Corbel's own link with the password
  * shown here; it stops itself when the time is up, or with Stop. Everything comes from /api/gpu.
  */
 import { useCallback, useEffect, useState } from "react";
@@ -115,7 +115,7 @@ export function GpuRent() {
     <section className="cmp-stage card-in relative overflow-hidden rounded-[28px] border border-[#3a2418] p-6 sm:p-8">
       <span aria-hidden className="cmp-glow" />
       <div className="relative flex flex-wrap items-center gap-3">
-        <p className="font-mono text-[12px] text-[#ff9a5c]">Free GPU time · Full holders</p>
+        <p className="font-mono text-[12px] text-[#ff9a5c]">Free GPU time · from the Plus tier</p>
         {status && <span className="ml-auto rounded-full border border-[#3a2418] px-3 py-1 font-mono text-[12px] text-[#d8c2b4]">{status}</span>}
       </div>
       <div className="relative">{body}</div>

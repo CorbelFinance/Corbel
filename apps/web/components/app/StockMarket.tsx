@@ -223,6 +223,7 @@ export function StockMarket() {
             tone={falling ? "bad" : "good"}
             value={share(falling ? down : up)}
             valueLabel={falling ? "of the volume is on falling names" : "of the volume is on rising names"}
+            source={d?.at ? `chain and market · read ${new Date(d.at).toUTCString().slice(17, 22)} UTC` : undefined}
             facts={[
               ["Volume", usd(t.volume)],
               ["Liquidity", usd(t.liquidity)],
