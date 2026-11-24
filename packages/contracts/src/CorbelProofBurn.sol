@@ -17,13 +17,18 @@ interface ILaunchFees {
     function transferCreatorFeeRecipient(address token, address to) external;
 }
 
+/// The token destroys coins itself: burn() lowers totalSupply and emits a Transfer to the zero address.
+interface IBurnable {
+    function burn(uint256 amount) external;
+}
+
 /**
  * Proof Burn. This contract is the recipient of the $CORBEL creator's trading fees and splits them itself:
  *
  *  - collect(), which anyone may call, claims the fees waiting in the launchpad's escrow. BASE_BPS of what came in stays
  *    here for the burn and the rest goes to the team in the same call.
  *  - burn(record) spends that share, at most once an hour: ETH buys $CORBEL in the one pool fixed at deployment, inside a
- *    price bound, and every coin goes straight to the dead address. It needs a record: the Merkle root of the token
+ *    price bound, and every coin is destroyed with the token's own burn(), so the total supply goes down. It needs a record: the Merkle root of the token
  *    checks sealed so far, written in the same transaction. No record, no burn. A recorded root can never be changed.
  *  - While a penalty runs, PENALTY_BPS of the fees stay for the burn instead. Penalties never add up past that.
  *      wrong(): a check that called a token clean, proven to be in a root recorded at least MIN_AGE earlier, whose token
@@ -43,7 +48,6 @@ interface ILaunchFees {
 contract CorbelProofBurn is ReentrancyGuard {
     using SafeTransfer for address;
 
-    address public constant DEAD = 0x000000000000000000000000000000000000dEaD;
     uint256 public constant BASE_BPS = 1_000; // 10%
     uint256 public constant PENALTY_BPS = 2_000; // 20%, the most there is
     uint256 public constant PENALTY = 1 days;
@@ -153,7 +157,7 @@ contract CorbelProofBurn is ReentrancyGuard {
         uint256 coins = IERC20Min(corbel).balanceOf(address(this));
         if (coins > 0) {
             uint256 keep = (coins * bps) / 10_000;
-            if (keep > 0) corbel.safeTransfer(DEAD, keep);
+            if (keep > 0) IBurnable(corbel).burn(keep);
             corbel.safeTransfer(team, coins - keep);
             totalBurned += keep;
         }
@@ -191,6 +195,7 @@ contract CorbelProofBurn is ReentrancyGuard {
         out = abi.decode(pm.unlock(""), (uint256));
         uint256 spent = before - address(this).balance;
         require(out > 0 && spent > 0, "no trade");
+        IBurnable(corbel).burn(out);
         budget = eth - spent; // what the price bound left unspent waits for the next hour
         burns++;
         totalEth += spent;
@@ -205,7 +210,7 @@ contract CorbelProofBurn is ReentrancyGuard {
         int128 d1 = int128(d);
         if (d0 < 0) pm.settle{value: uint256(uint128(-d0))}();
         uint256 out = d1 > 0 ? uint256(uint128(d1)) : 0;
-        if (out > 0) pm.take(pool.currency1, DEAD, out);
+        if (out > 0) pm.take(pool.currency1, address(this), out);
         return abi.encode(out);
     }
 

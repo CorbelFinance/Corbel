@@ -5,6 +5,10 @@ import {Base} from "../Base.sol";
 import {CorbelProofBurn, IFeeEscrow, ILaunchFees} from "../../src/CorbelProofBurn.sol";
 import {IERC20Min, IPoolManager, PoolKey} from "../../src/interfaces/External.sol";
 
+interface ISupply {
+    function totalSupply() external view returns (uint256);
+}
+
 interface IEscrowCredit {
     function credit(address) external payable;
 }
@@ -22,7 +26,6 @@ contract ProofBurnForkTest is Base {
     address constant CORBEL = 0xAA1f4De6b9f7cDf11FB8AA97ce163D35D731CdB1;
     address constant FACTORY = 0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e;
     address constant HOOK = 0xE5e702641Ea86F4ae6cC3cDaeD2B886f976Be044;
-    address constant DEAD = 0x000000000000000000000000000000000000dEaD;
     bytes32 constant PID = 0x3a59df3bd5870dee024ca508d8f89e46e3c47fdb024fc0d8f0c5cf3e5e6ef3a9;
 
     CorbelProofBurn b;
@@ -75,6 +78,16 @@ contract ProofBurnForkTest is Base {
         eq(recipient(), address(b), "and the creator cannot take them back");
     }
 
+    function test_aFeeTakenInCorbelBurnsItsShareAtOnce() public {
+        vm.prank(address(PM));
+        IERC20Min(CORBEL).transfer(address(b), 1_000e18);
+        (uint256 s0, uint256 t0) = (ISupply(CORBEL).totalSupply(), IERC20Min(CORBEL).balanceOf(team));
+        b.collect();
+        eq(s0 - ISupply(CORBEL).totalSupply(), 100e18, "a tenth destroyed");
+        eq(IERC20Min(CORBEL).balanceOf(team) - t0, 900e18, "the rest is the team's");
+        eq(b.totalBurned(), 100e18, "counted");
+    }
+
     function test_afterThirtyDaysTheFeesGoBackAndTheRestStillBurns() public {
         vm.prank(team);
         vm.expectRevert(bytes("term"));
@@ -124,7 +137,7 @@ contract ProofBurnForkTest is Base {
     function test_realFeesSplitTenToNinetyAndBurnWithTheRecord() public {
         uint256 fees = _fees();
         ok(fees > 0, "the escrow credits this contract, not the creator");
-        uint256 dead0 = IERC20Min(CORBEL).balanceOf(DEAD);
+        uint256 supply0 = ISupply(CORBEL).totalSupply();
         uint256 team0 = team.balance;
 
         vm.prank(stranger); // anyone may collect
@@ -143,7 +156,7 @@ contract ProofBurnForkTest is Base {
         vm.prank(keeper);
         uint256 out = b.burn(root);
         ok(out > 0, "bought");
-        eq(IERC20Min(CORBEL).balanceOf(DEAD) - dead0, out, "every coin bought is burned");
+        eq(supply0 - ISupply(CORBEL).totalSupply(), out, "every coin bought is destroyed: the total supply is lower by it");
         eq(IERC20Min(CORBEL).balanceOf(address(b)), 0, "none kept");
         eq(b.recordedAt(root), block.timestamp, "the record is written in the same transaction");
         eq(b.totalBurned(), out, "counted");
