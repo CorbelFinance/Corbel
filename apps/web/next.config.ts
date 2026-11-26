@@ -49,6 +49,7 @@ const config: NextConfig = {
       { source: "/app/launch/analytics", destination: "/app/trust/launches", permanent: true },
       { source: "/app/launch/:path*", destination: "/roadmap", permanent: false },
       { source: "/app/shield/:path*", destination: "/app/wallet/approvals", permanent: false },
+      { source: "/app/agents/pay", destination: "/app/agents/x402", permanent: true },
       { source: "/app/compute", destination: "/app/ai/chat", permanent: true },
       { source: "/app/compute/:path*", destination: "/app/ai/:path*", permanent: true },
     ];

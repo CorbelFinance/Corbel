@@ -4,7 +4,7 @@
  *   podium  70%  the three highest scores of the week: 30%, 25%, 15%
  *   draw    30%  two people drawn among the other eligible people (not the top three), equal shares
  *
- * Eligible: a live wallet (lib/points MIN_TXS transactions on chain) with at least MIN_POINTS points that week, so a
+ * Eligible: any wallet with at least MIN_POINTS points that week (no transaction minimum since 2026-11-26), so a
  * prize goes to someone who used Corbel, not to a wallet made for the draw. The draw is seeded by the hash of the first
  * block after the week ends, which nobody, us included, can know in advance; anyone can redo it from that hash.
  */

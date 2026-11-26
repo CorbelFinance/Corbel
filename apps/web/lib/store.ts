@@ -11,13 +11,15 @@ function dir() {
 }
 
 /** Opens (once) `<data dir>/<name>.db` and runs `schema` on first open. Null when the disk is not writable. */
-export function store(name: string, schema: string): DatabaseSync | null {
+/** `migrate` runs once per process after the schema, for changes CREATE IF NOT EXISTS cannot make (a new column). */
+export function store(name: string, schema: string, migrate?: (d: DatabaseSync) => void): DatabaseSync | null {
   if (stores.has(name)) return stores.get(name)!;
   try {
     const f = join(dir(), `${name}.db`);
     if (!existsSync(dirname(f))) mkdirSync(dirname(f), { recursive: true });
     const d = new DatabaseSync(f);
     d.exec(`PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 2000; ${schema}`);
+    migrate?.(d);
     stores.set(name, d);
   } catch {
     stores.set(name, null);

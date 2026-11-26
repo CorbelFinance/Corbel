@@ -103,7 +103,8 @@ export async function GET(req: Request) {
     const min = Math.max(0, Math.min(1e7, Number(new URL(req.url).searchParams.get("min") ?? 100) || 0));
     const all = [...W.store.values()];
     const rows = all.filter((r) => r.usd >= min).sort((a, b) => b.usd - a.usd).slice(0, 400).sort((a, b) => b.t - a.t);
-    const since = all.length ? Math.min(...all.map((r) => r.t)) : null;
+    // a loop, not Math.min(...all): the store holds over a hundred thousand swaps, too many arguments for one call
+    const since = all.length ? all.reduce((m, r) => (r.t < m ? r.t : m), Infinity) : null;
     // the wallet shown is the signer when known; the pool's counterparty otherwise
     return Response.json({ rows: rows.map(({ from, ...r }) => ({ ...r, symbol: nameOf(r.token, r.symbol), who: from ?? r.who, signer: !!from })), tokens: W.tokens.size, since, kept: all.length, min }, { headers: { "cache-control": "public, max-age=20" } });
   } finally {

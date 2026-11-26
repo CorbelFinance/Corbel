@@ -76,7 +76,10 @@ export function PaperBook() {
       .catch(() => undefined);
   }, []);
 
-  const mark = (p: Pos) => hot.find((h) => h.token.toLowerCase() === p.token.toLowerCase())?.price ?? p.last;
+  // the list's price only when it is in the same range as the last fill: a price in other units would value a position
+  // thousands of times over
+  const sane = (px: number | null | undefined, last: number) => (px && px > 0 && (!(last > 0) || (px / last < 20 && last / px < 20)) ? px : last);
+  const mark = (p: Pos) => sane(hot.find((h) => h.token.toLowerCase() === p.token.toLowerCase())?.price, p.last);
   const positions = Object.values(b.pos).filter((p) => p.qty > 0);
   const held = positions.reduce((s, p) => s + p.qty * mark(p), 0);
   const equity = b.cash + held;
@@ -122,7 +125,7 @@ export function PaperBook() {
       }
       next.pos[k] = p;
       next.fills = next.fills.slice(0, 200);
-      const eqNow = next.cash + Object.values(next.pos).reduce((acc, x) => acc + x.qty * (hot.find((h) => h.token.toLowerCase() === x.token.toLowerCase())?.price ?? x.last), 0);
+      const eqNow = next.cash + Object.values(next.pos).reduce((acc, x) => acc + x.qty * sane(hot.find((h) => h.token.toLowerCase() === x.token.toLowerCase())?.price, x.last), 0);
       next.curve = [...(next.curve.length ? next.curve : [{ at: Date.now() - 1, eq: next.start }]), { at: Date.now(), eq: eqNow }].slice(-300);
       setB(next);
       save(next);

@@ -1,5 +1,8 @@
+import { PayPerCall } from "./PayPerCall";
+import { TokenShelf } from "./TokenShelf";
 import { CopycatBoard } from "./CopycatBoard";
 import { AddressCheck } from "./AddressCheck";
+import { SellReplay } from "./SellReplay";
 import Link from "next/link";
 import type { Layer, Tab } from "@corbel/config";
 import { AgentGuard } from "./AgentGuard";
@@ -27,6 +30,7 @@ import { Terminal } from "./Terminal";
 import { StockMarket } from "./StockMarket";
 import { EarnPools } from "./EarnPools";
 import { WeekendGap } from "./WeekendGap";
+import { GapHistory } from "./GapHistory";
 import { LimitDelay, MandateBuilder, OrderPlanner } from "./Planners";
 import { AlphaBoard } from "./AlphaBoard";
 import { EarnGrid } from "./EarnGrid";
@@ -65,7 +69,12 @@ export function TabWidget({ kind, layer }: { kind: NonNullable<Tab["widget"]>; l
     case "terminal":
       return <Terminal />;
     case "stock-market":
-      return <StockMarket />;
+      return (
+        <div className="space-y-6">
+          <StockMarket />
+          <GapHistory />
+        </div>
+      );
     case "earn-pools":
       return (
         <div className="space-y-6">
@@ -160,7 +169,8 @@ export function TabWidget({ kind, layer }: { kind: NonNullable<Tab["widget"]>; l
       );
     case "trust-radar":
       return (
-        <div className="space-y-6">
+        <div className="space-y-3">
+          <TokenShelf />
           <LaunchBrief />
           <AlphaBoard />
           <PadBoard />
@@ -220,8 +230,12 @@ export function TabWidget({ kind, layer }: { kind: NonNullable<Tab["widget"]>; l
       );
     case "address-check":
       return <AddressCheck />;
+    case "sell-replay":
+      return <SellReplay />;
     case "agent-versus":
       return <AgentVersus />;
+    case "pay-per-call":
+      return <PayPerCall />;
     case "decision-log":
       return (
         <div className="space-y-4">

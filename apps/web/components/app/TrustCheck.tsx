@@ -5,6 +5,7 @@
  * one line, seven checks as rows, next steps at the side. While the chain is read, the seven steps light
  * up in order so the wait shows what is happening. No sign-in: anyone can check any token.
  */
+import { TeamClaim } from "./TeamClaim";
 import Link from "next/link";
 import { ProjectResearch } from "./ProjectResearch";
 import { RealityCheck } from "./RealityCheck";
@@ -319,7 +320,7 @@ export function TrustCheck() {
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
               <div className="overflow-hidden rounded-2xl border border-[#242424] bg-[#131313]">
                 <div className="flex items-center justify-between border-b border-[#242424] px-4 py-3">
-                  <span className="text-[15px] font-semibold text-text">{report.checks.length === 7 ? "Seven checks" : `${report.checks.length} checks`}</span>
+                  <span className="text-[15px] font-semibold text-text">Seven checks</span>
                   {report.meta && (
                     <span className="font-mono text-[12px] text-muted">
                       {report.meta.venue ?? "no pool"} · block {Number(report.meta.block).toLocaleString("en-US")} · {(report.meta.ms / 1000).toFixed(1)} s
@@ -352,8 +353,16 @@ export function TrustCheck() {
                                 {m.sign} {m.word}
                               </span>
                             </td>
-                            <td className="px-2 py-3 align-top text-muted">{c.reason}</td>
-                            <td className="px-4 py-3 text-right align-top tabular-nums text-[13px] text-text">{c.metric ?? "—"}</td>
+                            <td className="px-2 py-3 align-top text-muted">
+                              {c.reason}
+                              {c.source && (
+                                <span className="mt-1 block font-mono text-[11.5px] text-muted/80" title={`Read ${new Date(c.source.at).toISOString().replace("T", " ").slice(0, 19)} UTC`}>
+                                  {`From ${c.source.from}${c.source.block ? ` · block ${Number(c.source.block).toLocaleString("en-US")}` : ""} · ${new Date(c.source.at).toISOString().slice(11, 16)} UTC`}
+                                  {c.source.partial && <span className="ml-2 rounded border border-[#ffb27a]/50 px-1 text-[#ffb27a]">partial</span>}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right align-top tabular-nums text-[13px] text-text">{c.metric ?? (c.source?.partial ? "partial" : "—")}</td>
                           </tr>
                         );
                       })}
@@ -403,6 +412,7 @@ export function TrustCheck() {
                 </div>
               </aside>
             </div>
+            {!report.example && !notToken && <TeamClaim token={report.token} />}
             {!report.example && (report as { waivers?: WaiversIn }).waivers && <LaunchWaivers w={(report as { waivers?: WaiversIn }).waivers!} />}
             {!report.example && !notToken && <BuyerRetention token={report.token} />}
             {!report.example && <ProjectResearch token={report.token} />}

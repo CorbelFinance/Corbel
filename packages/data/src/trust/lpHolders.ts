@@ -33,10 +33,16 @@ export type PoolHealth = {
 };
 
 type Log = { topics: string[]; data: string };
-async function logs(client: PublicClient, pair: string, from: bigint, to: bigint, depth = 0): Promise<Log[]> {
+async function logs(client: PublicClient, pair: string, from: bigint, to: bigint, depth = 0, tries = 0): Promise<Log[]> {
   try {
     return (await client.request({ method: "eth_getLogs", params: [{ address: pair, topics: [TRANSFER], fromBlock: `0x${from.toString(16)}`, toBlock: `0x${to.toString(16)}` }] } as never)) as Log[];
   } catch (e) {
+    const msg = String((e as { details?: string })?.details ?? (e as Error)?.message ?? e);
+    if (!/spans|range|exceeds limit|too many (results|logs)|limit exceeded|response size|query returned more/i.test(msg)) {
+      if (tries >= 4) throw e;
+      await new Promise((r) => setTimeout(r, 1_000 * (tries + 1)));
+      return logs(client, pair, from, to, depth, tries + 1);
+    }
     if (depth >= 12 || to <= from) throw e;
     const mid = from + (to - from) / 2n;
     return [...(await logs(client, pair, from, mid, depth + 1)), ...(await logs(client, pair, mid + 1n, to, depth + 1))];
@@ -51,17 +57,23 @@ export async function readPoolHealth(client: PublicClient, pair: Address, fromBl
   if (!base) return { error: "This pair has no ETH or USDG side." };
   const head = await client.getBlockNumber();
 
-  // every LP transfer since the pool's first block, in windows of 2M blocks (split when the node refuses one)
+  // every LP transfer since the pool's first block, in windows of 10M blocks (the most the node takes for one contract;
+  // split when it refuses one), four at a time
   const net = new Map<string, bigint>();
-  for (let a = fromBlock; a <= head; a += 2_000_000n) {
-    const b = a + 1_999_999n > head ? head : a + 1_999_999n;
-    for (const l of await logs(client, pair, a, b)) {
-      if (l.topics.length !== 3) continue;
-      const f = `0x${l.topics[1]!.slice(26)}`, t = `0x${l.topics[2]!.slice(26)}`, v = BigInt(l.data.slice(0, 66));
-      net.set(f, (net.get(f) ?? 0n) - v);
-      net.set(t, (net.get(t) ?? 0n) + v);
+  const windows: [bigint, bigint][] = [];
+  for (let a = fromBlock; a <= head; a += 10_000_000n) windows.push([a, a + 9_999_999n > head ? head : a + 9_999_999n]);
+  let w = 0;
+  await Promise.all(Array.from({ length: 4 }, async () => {
+    while (w < windows.length) {
+      const [a, b] = windows[w++]!;
+      for (const l of await logs(client, pair, a, b)) {
+        if (l.topics.length !== 3) continue;
+        const f = `0x${l.topics[1]!.slice(26)}`, t = `0x${l.topics[2]!.slice(26)}`, v = BigInt(l.data.slice(0, 66));
+        net.set(f, (net.get(f) ?? 0n) - v);
+        net.set(t, (net.get(t) ?? 0n) + v);
+      }
     }
-  }
+  }));
   const supply = (await client.readContract({ address: pair, abi: PAIR, functionName: "totalSupply" })) as bigint;
   if (supply === 0n) return { error: "This pool has no liquidity." };
   const held = [...net.entries()].filter(([a, v]) => v > 0n && a !== "0x0000000000000000000000000000000000000000").sort((x, y) => (y[1] > x[1] ? 1 : -1));
@@ -85,10 +97,11 @@ export async function readPoolHealth(client: PublicClient, pair: Address, fromBl
   const depthUsd = 2 * (base === "USDG" ? baseRes : baseRes * ethUsd);
   const rows: PoolHealth["top"] = [];
   const all = [...net.entries()].filter(([a, v]) => v > 0n && a !== "0x0000000000000000000000000000000000000000").sort((x, y) => (y[1] > x[1] ? 1 : -1));
+  // small holders past the first 40 are counted as wallets without a code read: together they are a rounding error
+  const kinds = await Promise.all(all.slice(0, 40).map(([a]) => kindOf(a)));
   for (const [i, [a, v]] of all.entries()) {
     const share = Number(v) / Number(supply);
-    // small holders past the first 40 are counted as wallets without a code read: together they are a rounding error
-    const k = i < 40 ? await kindOf(a) : { kind: "wallet" as LpKind, label: null };
+    const k = kinds[i] ?? { kind: "wallet" as LpKind, label: null };
     shares[k.kind] += share;
     if (rows.length < 10) rows.push({ address: a, kind: k.kind, label: k.label, share, usd: share * depthUsd });
   }

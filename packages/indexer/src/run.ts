@@ -35,6 +35,7 @@ const setLaunch = db.prepare(`UPDATE pools SET launcher = ?, via = ?, pad = ? WH
 const setMeta = db.prepare(`UPDATE tokens SET symbol = ?, name = ?, decimals = ? WHERE address = ?`);
 const prog = (k: string) => (getP.get(k) as { value: number } | undefined)?.value;
 
+const V3_LIQ = [{ type: "function", name: "liquidity", stateMutability: "view", inputs: [], outputs: [{ type: "uint128" }] }] as const;
 const ERC20 = [
   { type: "function", name: "symbol", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
   { type: "function", name: "name", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
@@ -48,11 +49,15 @@ async function pool<T>(items: T[], fn: (t: T) => Promise<void>) {
   }));
 }
 
-async function windowAt(from: bigint, to: bigint) {
+/** Every venue's pool births: V2 pairs from each V2 factory, V3 pools, V4 pools. `onlyNew` reads only the venues added later. */
+async function windowAt(from: bigint, to: bigint, onlyNew = false) {
   const range = { fromBlock: `0x${from.toString(16)}`, toBlock: `0x${to.toString(16)}` };
+  const v2From = onlyNew ? RH.V2_FACTORIES_MORE : [RH.V2_FACTORY, ...RH.V2_FACTORIES_MORE];
+  const none = Promise.resolve([] as never[]);
+  const v3 = (await client.request({ method: "eth_getLogs", params: [{ ...range, address: RH.V3_FACTORY, topics: [TOPICS.V3_POOL_CREATED] }] } as never)) as { topics: string[]; data: string; blockNumber: string; transactionHash: string; logIndex: string }[];
   const [v2, v4] = await Promise.all([
-    client.request({ method: "eth_getLogs", params: [{ ...range, address: RH.V2_FACTORY, topics: [TOPICS.V2_PAIR_CREATED] }] } as never) as Promise<{ topics: string[]; data: string; blockNumber: string; transactionHash: string; logIndex: string }[]>,
-    client.request({ method: "eth_getLogs", params: [{ ...range, address: RH.V4_POOL_MANAGER, topics: [TOPICS.V4_INITIALIZE] }] } as never) as Promise<(never & { logIndex: string })[]>,
+    client.request({ method: "eth_getLogs", params: [{ ...range, address: v2From, topics: [TOPICS.V2_PAIR_CREATED] }] } as never) as Promise<{ topics: string[]; data: string; blockNumber: string; transactionHash: string; logIndex: string }[]>,
+    onlyNew ? none : (client.request({ method: "eth_getLogs", params: [{ ...range, address: RH.V4_POOL_MANAGER, topics: [TOPICS.V4_INITIALIZE] }] } as never) as Promise<(never & { logIndex: string })[]>),
   ]);
   const txs = new Map<string, { id: string; logIndex: number }[]>();
   const addTx = (h: string, id: string, logIndex: string | number) => txs.set(h, [...(txs.get(h) ?? []), { id, logIndex: Number(logIndex) }]);
@@ -65,6 +70,17 @@ async function windowAt(from: bigint, to: bigint) {
     const b = Number(BigInt(l.blockNumber));
     insPool.run(pair, "v2", t0, t1, null, null, null, b, l.transactionHash);
     addTx(l.transactionHash, pair, l.logIndex);
+    for (const t of [t0, t1]) if (insTok.run(t, b).changes) toks.add(t);
+  }
+  for (const l of v3) {
+    // PoolCreated(token0, token1, fee) indexed; data: tickSpacing, pool
+    const t0 = ("0x" + l.topics[1]!.slice(26)).toLowerCase();
+    const t1 = ("0x" + l.topics[2]!.slice(26)).toLowerCase();
+    const fee = Number(BigInt(l.topics[3]!));
+    const [spacing, addr] = decodeAbiParameters([{ type: "int24" }, { type: "address" }], l.data as Hex) as [number, string];
+    const b = Number(BigInt(l.blockNumber));
+    insPool.run(addr.toLowerCase(), "v3", t0, t1, fee, Number(spacing), null, b, l.transactionHash);
+    addTx(l.transactionHash, addr.toLowerCase(), l.logIndex);
     for (const t of [t0, t1]) if (insTok.run(t, b).changes) toks.add(t);
   }
   for (const raw of v4) {
@@ -86,7 +102,7 @@ async function windowAt(from: bigint, to: bigint) {
     const v = r.map((x) => (x.status === "fulfilled" ? x.value : null));
     setMeta.run(cleanText(v[0], 32), cleanText(v[1]), v[2] === null ? null : Number(v[2]), a);
   });
-  return { v2: v2.length, v4: v4.length, tokens: toks.size };
+  return { v2: v2.length, v3: v3.length, v4: v4.length, tokens: toks.size };
 }
 
 // ---------- launchers ----------
@@ -100,7 +116,7 @@ async function launchers(hash: string, pools: { id: string; logIndex: number }[]
   const ops = r.logs.filter((l) => ENTRY_POINTS.has(l.address.toLowerCase()) && l.topics[0] === USER_OP_EVENT).map((l) => ({ at: Number(l.logIndex), sender: `0x${l.topics[2]!.slice(26)}`.toLowerCase() }));
   // the launchpad: the contract the transaction called; through a bundler, the first contract in the logs that is
   // not plumbing (entry point, pool manager, V2 factory, the pool's own tokens)
-  const plumbing = new Set([...ENTRY_POINTS, RH.V4_POOL_MANAGER.toLowerCase(), RH.V2_FACTORY.toLowerCase(), RH.WETH.toLowerCase(), RH.USDG.toLowerCase()]);
+  const plumbing = new Set([...ENTRY_POINTS, RH.V4_POOL_MANAGER.toLowerCase(), RH.V2_FACTORY.toLowerCase(), ...RH.V2_FACTORIES_MORE, RH.V3_FACTORY, RH.WETH.toLowerCase(), RH.USDG.toLowerCase()]);
   const firstApp = () => r.logs.map((l) => l.address.toLowerCase()).find((a) => !plumbing.has(a) && !r.logs.some((x) => x.topics[0] === TOPICS.V2_PAIR_CREATED && `0x${x.data.slice(26, 66)}`.toLowerCase() === a)) ?? null;
   return pools.map((p) => {
     const op = ops.find((o) => o.at > p.logIndex);
@@ -197,6 +213,13 @@ async function refreshLiveness(): Promise<number> {
       else out.push([dead, null, r.id, seen]);
     });
   }
+  // V3 pools: alive while the pool holds liquidity in range; out of range is not drained (unknown, rechecked)
+  const v3 = stale.all("v3", REFRESH_BATCH) as { id: string; funded: number | null }[];
+  await pool(v3, async (r) => {
+    const l = (await client.readContract({ address: r.id as Address, abi: V3_LIQ, functionName: "liquidity" })) as bigint;
+    const [dead, seen] = verdict(l > 0n, r.funded);
+    out.push([dead === 1 ? null : dead, null, r.id, seen]);
+  });
   // funded and dry: drained only if liquidity was taken out; otherwise the price left the positions (unknown, rechecked)
   await pool(dryV4, async (r) => {
     const removed = await v4Removed(r.id, r.block);
@@ -251,6 +274,19 @@ async function main() {
     return;
   }
 
+  // venues added later (more V2 factories, the V3 factory): read once back over the same days the index keeps
+  const vfloor = head - BigInt(Math.round((DAYS * 86_400) / BLOCK_TIME));
+  let vlow = BigInt(prog("venues_low") ?? Number(prog("high") ?? Number(head)));
+  while (vlow > vfloor) {
+    const to = vlow - 1n;
+    const from = to - BigInt(LOG_WINDOW - 1) < vfloor ? vfloor : to - BigInt(LOG_WINDOW - 1);
+    const r = await windowAt(from, to, true).catch((e) => (console.error("[venues back]", (e as Error).message), null));
+    if (!r) break;
+    vlow = from;
+    setP.run("venues_low", Number(vlow));
+    if (r.v2 || r.v3) console.log(`[venues back] ${from}..${to}  v2 ${r.v2}  v3 ${r.v3}`);
+  }
+
   // launches: three days back on launchpad contracts, then follow with the pools
   const LAUNCH_DAYS = Number(process.env.CORBEL_LAUNCH_DAYS ?? 3);
   const lfloor = head - BigInt(Math.round((LAUNCH_DAYS * 86_400) / BLOCK_TIME));
@@ -269,6 +305,9 @@ async function main() {
 
   // follow head; re-read pool liveness in rotating batches
   let lastRefresh = 0;
+  // a few blocks behind the newest one: nodes are not all at the same height, and one that is behind refuses the range
+  const BEHIND = 5n;
+  let failed = 0;
   for (;;) {
     if (Date.now() - lastRefresh > REFRESH_EVERY) {
       const t = Date.now();
@@ -278,14 +317,26 @@ async function main() {
       const f = await fillPads(PAD_BATCH).catch(() => 0);
       if (f) console.log(`[pads] ${f} pools  ${Date.now() - lastRefresh} ms`);
     }
-    const now = await client.getBlockNumber();
-    while (high < now) {
-      const from = high + 1n;
-      const to = from + BigInt(LOG_WINDOW - 1) > now ? now : from + BigInt(LOG_WINDOW - 1);
-      const r = await windowAt(from, to);
-      high = to;
-      setP.run("high", Number(high));
-      if (r.v2 || r.v4) console.log(`[follow] ${from}..${to}  v2 ${r.v2}  v4 ${r.v4}`);
+    let now = high;
+    try {
+      now = (await client.getBlockNumber()) - BEHIND;
+      while (high < now) {
+        const from = high + 1n;
+        const to = from + BigInt(LOG_WINDOW - 1) > now ? now : from + BigInt(LOG_WINDOW - 1);
+        const r = await windowAt(from, to);
+        high = to;
+        setP.run("high", Number(high));
+        if (r.v2 || r.v3 || r.v4) console.log(`[follow] ${from}..${to}  v2 ${r.v2}  v3 ${r.v3}  v4 ${r.v4}`);
+      }
+      failed = 0;
+    } catch (e) {
+      // progress moves only after a whole window, so the same window is simply read again; a write that was cut short is
+      // undone first. Twenty failures in a row are not a passing refusal: leave, and start clean
+      if (db.isTransaction) db.exec("ROLLBACK");
+      if (++failed >= 20) throw e;
+      console.error(`[follow] ${failed}: ${String((e as { details?: string }).details || (e as Error).message).slice(0, 120)}`);
+      await new Promise((res) => setTimeout(res, 5_000));
+      continue;
     }
     while (lhigh < now) {
       const from = lhigh + 1n;

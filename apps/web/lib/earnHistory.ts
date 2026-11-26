@@ -18,7 +18,7 @@ export type Day = { day: number; vol: number; swaps: number; rb: number; rt: num
 const db = () =>
   store(
     // v2: the first record used a fixed 4 blocks a second; the chain runs near 9.5, so days were misplaced
-    "earnhist2",
+    "earnhist3",
     `CREATE TABLE IF NOT EXISTS days (pair TEXT NOT NULL, day INTEGER NOT NULL, vol REAL NOT NULL DEFAULT 0, swaps INTEGER NOT NULL DEFAULT 0, rb REAL, rt REAL, last INTEGER, PRIMARY KEY (pair, day));
      CREATE TABLE IF NOT EXISTS prog (pair TEXT PRIMARY KEY, low INTEGER NOT NULL, high INTEGER NOT NULL);`,
   );

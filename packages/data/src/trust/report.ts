@@ -341,10 +341,28 @@ export async function buildReport(client: PublicClient, token: Address, query: s
   const lt = isToken && !issuer && !stockIssued ? (index?.launchTx?.(token) ?? null) : null;
   if (lt && read.totalSupply) waivers = (await readWaivers(client, lt.tx as `0x${string}`, token, read.totalSupply).catch(() => null)) ?? undefined;
 
+  // every result says where it was read and when; an unknown one is marked partial, never shown as a zero
+  const at = Date.now(), bk = block.toString();
+  const FROM: Record<TrustCheck["id"], [string, boolean]> = {
+    honeypot: [`a simulated buy and sell on the ${venueText ?? "pool"}`, true],
+    exit: [`a simulated sell on the ${venueText ?? "pool"}`, true],
+    tax: [`a simulated buy and sell on the ${venueText ?? "pool"}`, true],
+    owner: ["the contract's code and storage", true],
+    liquidity: ["the pool's liquidity positions", true],
+    ticker: ["Corbel's index of every token on the chain", false],
+    creator: [born ? "Corbel's watch of every launchpad launch" : "Corbel's index of every pool and who opened it", false],
+  };
+  // always the same seven, in the same order: one that could not run is there as unknown, never left out
+  const ORDER: TrustCheck["id"][] = ["honeypot", "exit", "tax", "owner", "liquidity", "ticker", "creator"];
+  const NAMES: Record<TrustCheck["id"], string> = { honeypot: "Honeypot", exit: "Exit now", tax: "Buy / sell tax", owner: "Owner rights", liquidity: "Liquidity lock", ticker: "Ticker vs contract", creator: "Creator history" };
+  for (const id of ORDER) if (!checks.some((c) => c.id === id)) checks.push({ id, name: NAMES[id], result: "unknown", reason: "Could not run on this contract." });
+  checks.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+  const sourced = checks.map((c) => ({ ...c, source: { from: FROM[c.id][0], block: FROM[c.id][1] ? bk : null, at, partial: c.result === "unknown" } }));
+
   return {
     token,
     example: false,
-    checks,
+    checks: sourced,
     ...(waivers ? { waivers } : {}),
     meta: { symbol: read.symbol, name: read.name, venue: venueText, pool: wethPair?.pair ?? v4Native?.id ?? null, block: block.toString(), ms: Date.now() - t0 },
   };

@@ -11,7 +11,7 @@ import { Verdict, short } from "./kit";
 import { WalletPick } from "./WalletPick";
 
 type Row = { token: string; symbol: string | null; copy: boolean; amount: number; spot: number | null; exit: number | null; impact: number | null; route: string | null; reason: string | null; kind: "ok" | "none" | "unread" };
-type R = { address: string; block: string; eth: number; usdgPerEth: number | null; rows: Row[]; more: number; totals: { spot: number; exit: number; stuck: number; unread: number }; at: number; error?: string };
+type R = { address: string; block: string; eth: number; usdgPerEth: number | null; rows: Row[]; more: number; totals: { spot: number; exit: number; stuck: number; unread: number; unpriced?: number; copies?: number }; at: number; error?: string };
 
 const SCAN = "https://robinhoodchain.blockscout.com";
 const eth = (v: number) => (v >= 100 ? v.toFixed(1) : v >= 1 ? v.toFixed(3) : v >= 0.0001 ? v.toFixed(4) : v >= 0.000001 ? v.toFixed(6) : v > 0 ? "<0.000001" : "0");
@@ -26,7 +26,13 @@ export function WalletXray() {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/xray?address=${a}`, { cache: "no-store" });
+      let res = await fetch(`/api/xray?address=${a}`, { cache: "no-store" });
+      // a wallet with many tokens takes longer than one request: the answer keeps being read, so ask again
+      for (let i = 0; res.status === 202 && i < 12; i++) {
+        await new Promise((r) => setTimeout(r, 2_000));
+        res = await fetch(`/api/xray?address=${a}`, { cache: "no-store" });
+      }
+      if (res.status === 202) return setErr("Still reading this wallet. Try again in a minute.");
       const j = (await res.json()) as R;
       if (!res.ok || j.error) return setErr(j.error ?? "The chain did not answer.");
       setR(j);
@@ -48,7 +54,7 @@ export function WalletXray() {
     <div className="space-y-4">
       <Bay
         tone="violet"
-        kicker="X-ray · read-only"
+        kicker="X-ray"
         title="What this wallet could really sell for"
         busy={busy}
         foot={<span>Each holding is sold whole into ETH in a simulation at the latest block, on every route. Nothing is signed. Takes up to two minutes.</span>}
@@ -63,11 +69,11 @@ export function WalletXray() {
         <Verdict
           kicker={kept === null ? "Nothing to sell" : kept >= 0.9 ? "Mostly sellable" : kept >= 0.5 ? "Thin exits" : "Worth far less than it shows"}
           tone={kept === null ? "good" : kept >= 0.9 ? "good" : kept >= 0.5 ? "caution" : "bad"}
-          value={kept === null ? "—" : `${Math.round(kept * 100)}%`}
-          valueLabel="of the spot value a sale pays today"
+          value={kept === null ? "0" : kept > 1 ? "100%" : `${Math.round(kept * 100)}%`}
+          valueLabel="of the price shown is what a whole sale pays"
           source={`chain · block ${Number(r.block).toLocaleString("en-US")} · ${new Date(r.at).toUTCString().slice(17, 22)} UTC`}
           facts={[
-            ["Tokens at spot", `${eth(t.spot)} ETH${usd(t.spot)}`],
+            ["At a small sale's price", `${eth(t.spot)} ETH${usd(t.spot)}`],
             ["A sale pays", `${eth(t.exit)} ETH${usd(t.exit)}`],
             ["No exit at all", t.unread ? `${t.stuck} · ${t.unread} not simulated` : String(t.stuck)],
             ["ETH and WETH held", `${eth(r.eth)} ETH`],
@@ -75,7 +81,7 @@ export function WalletXray() {
         >
           {kept === null
             ? "This wallet holds no token with a pool price, only ETH or nothing."
-            : `Spot prices say the tokens are worth ${eth(t.spot)} ETH. Selling each one whole would pay ${eth(t.exit)} ETH: the rest is price impact${t.stuck ? `, and ${t.stuck} token${t.stuck === 1 ? " has" : "s have"} no route out` : ""}.`}
+            : `At the price of a small sale the tokens are worth ${eth(t.spot)} ETH. Selling each one whole would pay ${eth(t.exit)} ETH${kept < 0.995 ? ": the rest is price impact" : ", almost all of it"}${t.stuck ? `, and ${t.stuck} token${t.stuck === 1 ? " has" : "s have"} no route out` : ""}.${t.unpriced ? ` Tokens with no spot price would pay ${eth(t.unpriced)} ETH more.` : ""}${t.copies ? ` ${t.copies} tokens only wear the ticker of a base asset: they are bait and are left out.` : ""}`}
         </Verdict>
       )}
 
@@ -85,7 +91,7 @@ export function WalletXray() {
             <table className="w-full min-w-[720px] border-collapse text-left text-[13.5px]">
               <thead>
                 <tr className="border-b border-line text-[12px] uppercase tracking-[0.08em] text-muted">
-                  {["Token", "Held", "Spot, ETH", "A sale pays, ETH", "Kept", "Route"].map((h) => (
+                  {["Token", "Held", "Small-sale price, ETH", "A whole sale pays, ETH", "Kept", "Route"].map((h) => (
                     <th key={h} scope="col" className="px-4 py-3 font-medium">{h}</th>
                   ))}
                 </tr>

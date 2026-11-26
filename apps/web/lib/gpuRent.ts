@@ -11,7 +11,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { GPU_FREE, GPU_PAID } from "@corbel/config";
 import { getClient } from "@corbel/data/chain";
 import { gpuProvider, type GpuMachine } from "./gpuProvider";
-import { balance as creditBalance, charge, creditsOpen, refund } from "./credits";
+import { balance as creditBalance, charge, creditsOpen, settle } from "./credits";
 import { store } from "./store";
 import { tierOf } from "./tiers";
 import { markupOf } from "./markup";
@@ -242,7 +242,7 @@ export async function startGpu(owner: string, gpuId: string, agreed = false, app
     if (running().filter((r) => r.paid).length >= GPU_PAID.maxAtOnce) return "All paid machines are in use. Try again in a few minutes.";
     left = paid.minutes;
     reserve = Math.round(c.maxHourly * (1 + markupOf(o)) * (left / 60) * 100) / 100;
-    if (creditBalance(o).balance < reserve) return `This needs $${reserve.toFixed(2)} of Credits. Top up first.`;
+    if (creditBalance(o).spendable < reserve) return `This needs $${reserve.toFixed(2)} of Credits. Top up first.`;
   } else {
     if (startsToday(o) >= GPU_FREE.startsPerDay) return `That was today's ${GPU_FREE.startsPerDay} starts. They come back at 00:00 UTC.`;
     const mine = freeMinutes(o);
@@ -255,6 +255,15 @@ export async function startGpu(owner: string, gpuId: string, agreed = false, app
     if (spentToday() + cost > GPU_FREE.budgetUsdDay) return "Today's free GPU time is used up. It comes back at 00:00 UTC.";
   }
   const id = randomBytes(8).toString("hex");
+  const rref = `reserve ${id.slice(0, 8)}`, bref = `back ${id.slice(0, 8)}`;
+  if (paid) {
+    // take the reserve first and check what was really taken: another spend may have come in since the balance check
+    const got = charge(o, "gpu", reserve, { ref: rref });
+    if (got + 1e-9 < reserve) {
+      settle(o, rref, 0, bref);
+      return `This needs $${reserve.toFixed(2)} of Credits. Top up first.`;
+    }
+  }
   const token = randomBytes(18).toString("base64url");
   const pass = randomBytes(12).toString("base64url");
   const now = Date.now();
@@ -262,7 +271,6 @@ export async function startGpu(owner: string, gpuId: string, agreed = false, app
   const d = db();
   if (!d) return "GPUs are not open right now.";
   d.prepare("INSERT INTO rentals (id, owner, gpu, pod, hourly, started, ends, stopped, status, token, pass, day, app, paid, reserve) VALUES (?, ?, ?, NULL, ?, ?, ?, NULL, 'starting', ?, ?, ?, ?, ?, ?)").run(id, o, c.id, c.maxHourly, now, ends, token, pass, today(now), app.id, paid ? 1 : 0, reserve);
-  if (paid) charge(o, "gpu", reserve, { ref: `reserve ${id.slice(0, 8)}` });
   await note(id, `Requested: ${app.label} on the ${c.label}, ${Math.floor(left)} minutes${paid ? `, $${reserve.toFixed(2)} reserved from Credits` : ""}`);
   await note(id, "Rules accepted: no mining, no attacks, nothing illegal");
   const name = `${PREFIX}${id}`;
@@ -273,7 +281,7 @@ export async function startGpu(owner: string, gpuId: string, agreed = false, app
     if (pod.hourly && pod.hourly > c.maxHourly) {
       await p.stop(pod.id).catch(() => null);
       d.prepare("UPDATE rentals SET status = 'failed', stopped = ? WHERE id = ?").run(Date.now(), id);
-      if (paid) refund(o, reserve, `back ${id.slice(0, 8)}`);
+      if (paid) settle(o, rref, 0, bref);
       await note(id, "Refused: the machine cost more than the limit; nothing was charged");
       return "That GPU costs more than usual right now. Try the other one.";
     }
@@ -288,7 +296,7 @@ export async function startGpu(owner: string, gpuId: string, agreed = false, app
     return null;
   } catch {
     d.prepare("UPDATE rentals SET status = 'failed', stopped = ? WHERE id = ?").run(Date.now(), id);
-    if (paid) refund(o, reserve, `back ${id.slice(0, 8)}`);
+    if (paid) settle(o, rref, 0, bref);
     await note(id, "No machine free of that kind; the minutes were not used");
     // the provider may have made it although its answer never came back: anything under this name goes
     await stopByName(name);
@@ -324,7 +332,7 @@ async function halt(r: Row, why: string) {
     if (r.paid && r.reserve) {
       const used = r.status === "running" ? Math.max(0, (at - r.started) / 3_600_000) * r.hourly * (1 + markupOf(r.owner)) : 0;
       const cost = Math.min(r.reserve, Math.round(used * 100) / 100);
-      refund(r.owner, r.reserve - cost, `back ${r.id.slice(0, 8)}`);
+      settle(r.owner, `reserve ${r.id.slice(0, 8)}`, cost, `back ${r.id.slice(0, 8)}`);
       await note(r.id, `Charged $${cost.toFixed(2)} for the time used; $${(r.reserve - cost).toFixed(2)} back to Credits`);
     }
   }

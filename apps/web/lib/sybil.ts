@@ -141,7 +141,20 @@ async function isContract(a: string) {
   return c;
 }
 
-/** Outgoing transaction count, and the first gas funder when an explorer key is set (cached a day). */
+/**
+ * The first wallet that sent ETH to `a`, from a node that offers a transfer-history method (TRANSFERS_RPC with
+ * TRANSFERS_METHOD on the server; the method takes { toAddress, category, order, maxCount } and returns { transfers }).
+ */
+async function firstFunder(a: string): Promise<string | null | undefined> {
+  const url = process.env.TRANSFERS_RPC, method = process.env.TRANSFERS_METHOD;
+  if (!url || !method) return undefined;
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: [{ toAddress: a, category: ["external"], order: "asc", maxCount: "0x5" }] }), signal: AbortSignal.timeout(15_000) });
+  const j = (await r.json()) as { result?: { transfers?: { from?: string; value?: number | null }[] } };
+  const first = (j.result?.transfers ?? []).find((x) => (x.value ?? 0) > 0 && x.from);
+  return first?.from ? lc(first.from) : null;
+}
+
+/** Outgoing transaction count, and the first gas funder from the transfer history, else an explorer key (cached a day). */
 async function walletFacts(a: string) {
   const row = db()?.prepare("SELECT nonce, funder, at FROM wallet WHERE addr = ?").get(a) as { nonce: number | null; funder: string | null; at: number } | undefined;
   if (row && Date.now() - row.at < 86_400_000) return row;
@@ -149,7 +162,8 @@ async function walletFacts(a: string) {
   const nonce = client ? await client.getTransactionCount({ address: a as `0x${string}` }).catch(() => null) : null;
   let funder: string | null = row?.funder ?? null;
   const key = process.env.EXPLORER_KEY ?? process.env.XCHECK_BS_KEY;
-  if (!funder && key) {
+  if (!funder) funder = (await firstFunder(a).catch(() => undefined)) ?? null;
+  if (!funder && key && !process.env.TRANSFERS_RPC) {
     try {
       const r = await fetch(`${process.env.EXPLORER_API_URL ?? ""}/4663/api/v2/addresses/${a}/transactions?filter=to&sort=block_number&order=asc&apikey=${key}`, { signal: AbortSignal.timeout(15_000) });
       const j = (await r.json()) as { items?: { from?: { hash?: string }; value?: string }[] };

@@ -113,3 +113,65 @@ describe("batch limits", () => {
     expect(gateState().endpoints).toEqual(["small.example"]);
   });
 });
+
+describe("log queries wider than a window", () => {
+  const body = (p: object) => ({ method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getLogs", params: [{ fromBlock: "0x0", toBlock: "0x989680", ...p }] }) });
+  it("go only where one contract's whole range is taken, never to a node that must refuse it", async () => {
+    process.env.RPC_URLS = "https://wide.example#wide=10000001,https://narrow.example#logs=10000";
+    process.env.RPC_SPACING_MS = "0";
+    process.env.RPC_LANES = "2";
+    const asked: string[] = [];
+    globalThis.fetch = vi.fn(async (u: string, i: RequestInit) => {
+      if (String(i.body).includes("eth_chainId")) return new Response('{"result":"0x1237"}');
+      asked.push(new URL(u).host);
+      return new Response('{"result":[]}');
+    }) as never;
+    try {
+      await Promise.all(Array.from({ length: 12 }, () => limitedFetch("https://wide.example", body({ address: "0x1", topics: ["0x2"] }))));
+      expect(new Set(asked)).toEqual(new Set(["wide.example"]));
+      // without a contract the same range fits nowhere: the widest window is asked, the narrow node is not
+      asked.length = 0;
+      await Promise.all(Array.from({ length: 6 }, () => limitedFetch("https://wide.example", body({ topics: ["0x2"] }))));
+      expect(asked).not.toContain("narrow.example");
+    } finally {
+      delete process.env.RPC_URLS;
+    }
+  });
+});
+
+describe("a caller that stopped waiting", () => {
+  it("is dropped from the queue and never counts against a lane", async () => {
+    process.env.RPC_CONCURRENCY = "1";
+    process.env.RPC_SPACING_MS = "0";
+    process.env.RPC_LANES = "1";
+    let sent = 0;
+    globalThis.fetch = vi.fn(async (_u: string, i?: RequestInit) => {
+      i?.signal?.throwIfAborted();
+      sent++;
+      await new Promise((r) => setTimeout(r, 60));
+      return new Response("ok");
+    }) as never;
+    const slow = limitedFetch("https://gone.example/");
+    // eight callers give up while the only lane is busy: five failures would have rested it for 30 s
+    const late = Array.from({ length: 8 }, () => limitedFetch("https://gone.example/", { signal: AbortSignal.timeout(15) }).catch(() => "gone"));
+    await slow;
+    expect(await Promise.all(late)).toEqual(Array(8).fill("gone"));
+    const t = Date.now();
+    expect((await limitedFetch("https://gone.example/")).status).toBe(200);
+    expect(Date.now() - t).toBeLessThan(2_000);
+    expect(sent).toBe(2);
+  });
+  it("cancelling a request in flight frees the lane without resting it", async () => {
+    process.env.RPC_CONCURRENCY = "1";
+    process.env.RPC_SPACING_MS = "0";
+    process.env.RPC_LANES = "1";
+    globalThis.fetch = vi.fn((_u: string, i?: RequestInit) => new Promise<Response>((res, rej) => {
+      if (!i?.signal) return res(new Response("ok"));
+      i.signal.addEventListener("abort", () => rej(i.signal!.reason));
+    })) as never;
+    for (let k = 0; k < 6; k++) await expect(limitedFetch("https://flight.example/", { signal: AbortSignal.timeout(5) })).rejects.toBeDefined();
+    const t = Date.now();
+    expect((await limitedFetch("https://flight.example/")).status).toBe(200);
+    expect(Date.now() - t).toBeLessThan(2_000);
+  });
+});

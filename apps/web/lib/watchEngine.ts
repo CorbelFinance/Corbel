@@ -8,11 +8,13 @@
  * Events are kept on disk (the last EVENTS_KEPT); a wallet's feed is the events of the tokens it watches. Nothing about
  * the wallet is sent anywhere; Telegram delivery, when configured, goes through lib/telegram.
  */
+import { holderOk } from "./holderGate";
 import { asBackground, buildReport, getClient, readMid, readWallet, redact } from "@corbel/data/chain";
 import { creatorRecord, launchCreator, launchTx, launcherHistory, poolLauncher, sameTicker, v4PoolsFor } from "@corbel/indexer";
 import { store } from "./store";
 import { walletsWatchedBy, watchedAddresses, watchedBy, watchedTokens } from "./watchlist";
-import { HELD } from "@corbel/config";
+import { HELD, drainFor } from "@corbel/config";
+import { tierOf } from "./tiers";
 
 export const SWEEP_MS = 15 * 60_000;
 const MAX_TOKENS = 40;
@@ -108,7 +110,7 @@ export async function sweepWatch(): Promise<number> {
     }
     // watched wallets: the drain alarm compares the base balances with the last look
     const client = getClient(process.env.RPC_URL);
-    for (const w of client && !HELD.drain ? watchedAddresses(MAX_TOKENS) : []) {
+    for (const w of client && !HELD.drain ? watchedAddresses(MAX_TOKENS, (owner) => (holderOk(owner, "drain") ? drainFor(tierOf(owner)) : false)) : []) {
       const r = await readWallet(client!, w as `0x${string}`).catch(() => null);
       if (!r) continue;
       const next = Object.fromEntries(r.balances.map((b) => [b.symbol, Number(b.value)]));

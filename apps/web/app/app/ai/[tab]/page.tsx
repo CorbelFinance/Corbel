@@ -23,7 +23,7 @@ type Id = (typeof TABS)[number]["id"];
 const RISKS = [
   "Prices are list prices from public catalogues and change without notice.",
   "A model can be slow, down or wrong. Check what it tells you before you act on it.",
-  "Payments are not open yet. Nothing on these pages takes money.",
+  "Credits are spent only: a top-up never comes back as USDG. Send USDG only from your own wallet on Robinhood Chain.",
 ];
 
 export const dynamicParams = false;

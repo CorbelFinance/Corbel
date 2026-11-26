@@ -509,7 +509,7 @@ export function RewardsBoard() {
         <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-muted">You don&apos;t need to be in the top three to win. Two more prizes go to random wallets, picked in a way nobody can steer or know in advance, us included.</p>
         <ol className="mt-6 grid gap-px overflow-hidden rounded-xl border border-[#222] bg-[#222] md:grid-cols-4">
           {[
-            ["Who is in", `Everyone with ${s.minPoints}+ points this week whose wallet has at least ${r.minTxs} transactions on Robinhood Chain. The top three are out: they already won. Team wallets never take part.`],
+            ["Who is in", `Everyone with ${s.minPoints}+ points this week. The top three are out: they already won. Team wallets never take part.`],
             ["The seed", "When the week closes on Monday 00:00 UTC, we take the first Robinhood Chain block made after that moment. Its hash is a long random number that did not exist while the week ran."],
             ["The pick", "Everyone in the draw is listed in board order. The hash, run through a public formula, gives a number; that number points at the first winner. The same is done again for the second."],
             ["Check it", "The list, the block and its hash are published. Run our open script and you get the same two winners; any change on our side would show at once."],
@@ -566,7 +566,9 @@ export function RewardsBoard() {
             ["Coins can only go to the winner", "The list fixes each wallet and its amount; the project multisig puts its fingerprint (a Merkle root) on chain. Anyone may send a claim, but the contract only ever pays the wallet on the list."],
             ["The draw cannot be steered", "The two drawn winners come from the hash of the first block after the week ends. Nobody knows it in advance, and anyone can redo the draw with the script."],
             ["Unclaimed coins are burned", `Whatever is not claimed within ${s.claimDays ?? 14} days goes to the dead address, never back to us.`],
-            ["The team does not play", "Team wallets earn nothing. Linked wallets count as one person, every action has a daily cap, and only a used wallet is paid."],
+            ["The team does not play", "Team wallets earn nothing. Linked wallets count as one person, and every action has a daily cap."],
+            ["Bots earn nothing for swaps", "A wallet that trades like a bot, by the same rule as Human vs bot volume, gets no points for its swaps."],
+            ["Every winner is checked", "Before payout the team checks each winning wallet by hand and publishes, wallet by wallet, why it passed or not."],
           ].map(([k, v], i) => (
             <li key={k as string} className="flex gap-4">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-leaf/40 bg-leaf/10 font-mono text-[13px] text-leaf">{i + 1}</span>

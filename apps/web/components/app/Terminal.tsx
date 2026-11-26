@@ -10,7 +10,8 @@ import { Gutter, useSize } from "./Resize";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cx } from "@corbel/ui";
 import { launchpadName, launchpadTone } from "@corbel/config";
-import { Candles, fmtPx, toBars, type Marker, type Tick } from "./Candles";
+import { Candles, fmtPx, toBars, type Bar, type Marker, type Tick } from "./Candles";
+import { CompanyCard } from "./CompanyCard";
 import type { ReactNode } from "react";
 import { Idle, Led, Seg, short } from "./kit";
 
@@ -701,7 +702,33 @@ export function Terminal() {
     () => (live ? [...live.lp.map((e) => ({ t: e.t, kind: e.kind })), ...devTrades.map((x) => ({ t: x.t, kind: x.side === "buy" ? ("devbuy" as const) : ("devsell" as const), usd: x.base * (live.base.usd || 1) }))] : []),
     [live, devTrades],
   );
-  const bars = useMemo(() => toBars(ticks, Number(tf), now || undefined), [ticks, tf, now]);
+  const liveBars = useMemo(() => toBars(ticks, Number(tf), now || undefined), [ticks, tf, now]);
+  // kept candles from before the live read: the chart scrolls back to the pool's first day
+  const sinceHour = live ? Math.floor(live.since / 3600) : 0;
+  const [hist, setHist] = useState<{ key: string; bars: Bar[] } | null>(null);
+  useEffect(() => {
+    if (!sinceHour || Number(tf) < 300) return;
+    let off = false;
+    const key = `${addr.toLowerCase()}:${tf}`;
+    const days = Number(tf) >= 14400 ? 400 : Number(tf) >= 3600 ? 240 : Number(tf) >= 900 ? 60 : 20;
+    const load = () =>
+      fetch(`/api/candles?token=${addr}&tf=${tf}&before=${sinceHour * 3600}&days=${days}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { bars?: Bar[] } | null) => !off && setHist((h) => (h && h.key === key && h.bars.length === (j?.bars ?? []).length ? h : { key, bars: j?.bars ?? [] })))
+        .catch(() => undefined);
+    void load();
+    const id = setInterval(load, 90_000);
+    return () => {
+      off = true;
+      clearInterval(id);
+    };
+  }, [addr, tf, sinceHour]);
+  const bars = useMemo(() => {
+    if (!hist || hist.key !== `${addr.toLowerCase()}:${tf}` || !hist.bars.length || !liveBars.length) return liveBars;
+    const first = liveBars[0]!.t;
+    const old = hist.bars.filter((b) => b.t < first).map((b) => ({ t: b.t, o: b.o * k, h: b.h * k, l: b.l * k, c: b.c * k, v: b.v * k, vb: b.vb * k }));
+    return old.length ? [...old, ...liveBars] : liveBars;
+  }, [hist, liveBars, k, addr, tf]);
 
   const stats = useMemo(() => {
     if (!live) return null;
@@ -722,8 +749,8 @@ export function Terminal() {
       change: first && last ? (last - first) / first : null,
       fdv: live.token.supply ? live.token.supply * pxUsd : null,
       liq: live.reserves ? live.reserves.base * 2 * live.base.usd : null,
-      hi: day.length ? Math.max(...day.map((t) => t.price)) * live.base.usd : null,
-      lo: day.length ? Math.min(...day.map((t) => t.price)) * live.base.usd : null,
+      hi: day.length ? day.reduce((m, t) => (t.price > m ? t.price : m), -Infinity) * live.base.usd : null,
+      lo: day.length ? day.reduce((m, t) => (t.price < m ? t.price : m), Infinity) * live.base.usd : null,
       d: agg(day),
       w: { "5m": agg(win(300)), "1h": agg(win(3600)), "6h": agg(win(21600)), [`${hours}h`]: agg(day) } as Record<string, ReturnType<typeof agg>>,
     };
@@ -890,7 +917,7 @@ export function Terminal() {
                 </span>
               </div>
               <div className="px-2 pt-2">
-                <Candles bars={bars} mode={mode} unit={unit} markers={markers} height={chartH} drawKey={live.token.address.toLowerCase()} shareTitle={`${live.token.symbol} / ${live.pool.base} · ${TF.find((t) => t.id === tf)?.label ?? ""}`} />
+                <Candles key={`${addr.toLowerCase()}-${tf}`} bars={bars} mode={mode} unit={unit} markers={markers} height={chartH} drawKey={live.token.address.toLowerCase()} shareTitle={`${live.token.symbol} / ${live.pool.base} · ${TF.find((t) => t.id === tf)?.label ?? ""}`} />
               </div>
               <Gutter dir="y" value={chartH} set={setChartH} def={chartDef} label="Chart height" className="w-full" />
               {stats && (
@@ -1028,6 +1055,7 @@ export function Terminal() {
         {live && <ExitPlan key={`x-${live.token.address}`} m={live} />}
         <MyRecent />
         {live && <TokenCard key={`i-${live.token.address}`} m={live} now={now} checks={checks} />}
+        {live && <CompanyCard key={`co-${live.token.address}`} symbol={live.token.symbol} name={live.token.name} stock={/^0x/.test(live.token.address) && (live.token.name ?? "").toLowerCase().includes("tokenized")} />}
         {live && (
           <p className="px-3 py-3 text-[12px] leading-relaxed text-muted">
             Prices come from this pool&apos;s swaps; dollars through the WETH/USDG pool. A thin pool moves on small trades. Read Checks before you buy.

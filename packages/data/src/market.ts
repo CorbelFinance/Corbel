@@ -231,8 +231,10 @@ type Log = { topics: string[]; data: `0x${string}`; blockNumber: string; transac
 /**
  * Reads the market for `token`. `v4` are the token's v4 pools from the local index (newest first).
  * `windows` × LOG_WINDOW blocks of history (14 ≈ one day at ~4 blocks a second).
+ * `opts.head` reads a span that ends at an earlier block (the price history behind the chart is filled that way);
+ * `opts.maxTrades` keeps more than the usual 2,000 swaps; `opts.signers: false` skips the signer lookups.
  */
-export async function readMarket(client: PublicClient, tokenIn: Address, v4: V4Ref[], windows = 36): Promise<Market | null> {
+export async function readMarket(client: PublicClient, tokenIn: Address, v4: V4Ref[], windows = 36, opts: { head?: number; maxTrades?: number; signers?: boolean } = {}): Promise<Market | null> {
   const t0 = Date.now();
   const token = getAddress(tokenIn);
   const lower = token.toLowerCase();
@@ -250,7 +252,7 @@ export async function readMarket(client: PublicClient, tokenIn: Address, v4: V4R
   const bestV4 = v4ok.length > 1 ? (await rankV4ByDepth(client, token, v4ok))[0]?.pool : v4ok[0];
   if (!bestV2 && !bestV4) return null;
 
-  const head = Number(headBig);
+  const head = opts.head && opts.head < Number(headBig) ? opts.head : Number(headBig);
   const from = head - windows * LOG_WINDOW + 1;
   const edges: bigint[] = [];
   for (let i = 0; i <= windows; i++) edges.push(BigInt(Math.max(0, head - i * LOG_WINDOW)));
@@ -370,7 +372,7 @@ export async function readMarket(client: PublicClient, tokenIn: Address, v4: V4R
   trades.sort((a, b) => b.block - a.block);
   lp.sort((a, b) => b.block - a.block);
   // who actually traded: the newest swaps and liquidity moves get their signing wallet (labels in the terminal use it)
-  await signers(client, [...trades.slice(0, 150).map((x) => x.tx), ...lp.slice(0, 40).map((x) => x.tx)]);
+  if (opts.signers !== false) await signers(client, [...trades.slice(0, 150).map((x) => x.tx), ...lp.slice(0, 40).map((x) => x.tx)]);
   for (const x of trades.slice(0, 150)) x.from = SIGNERS.get(x.tx);
   for (const x of lp.slice(0, 40)) x.from = SIGNERS.get(x.tx);
 
@@ -385,7 +387,7 @@ export async function readMarket(client: PublicClient, tokenIn: Address, v4: V4R
     price,
     reserves,
     ladder,
-    trades: trades.slice(0, 2000),
+    trades: trades.slice(0, opts.maxTrades ?? 2000),
     lp,
     ms: Date.now() - t0,
   };

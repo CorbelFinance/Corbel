@@ -2,6 +2,8 @@ import { AI_ACCESS, TOKEN, aiTier } from "@corbel/config";
 import { getClient, parseAddress, redact } from "@corbel/data/chain";
 import { guardWait } from "@/lib/guard";
 import { heldCoins, lockedCoins } from "@/lib/tiers";
+import { session } from "@/lib/auth";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -33,6 +35,8 @@ export async function GET(req: Request) {
     const tier = aiTier(counted);
     const tiers = AI_ACCESS.tiers;
     const next = tiers.find((t) => t.minCoins > counted) ?? null;
+    // points only for opening your own card, never someone else's
+    if (session(req)?.address.toLowerCase() === a.toLowerCase()) award(req, "card");
     return Response.json({
       block: block.toString(),
       balance,

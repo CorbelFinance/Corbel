@@ -2,12 +2,13 @@
  * Reward season points. A signed-in wallet earns points for real use of Corbel's tools, each action with a daily cap so
  * clicking cannot farm it; actions that cost money (a swap made through Corbel) earn the most. Holders earn more by
  * tier. Wallets the linker ties to one person share one score. A week's score decides the share of that week's pool
- * (lib/season); to be paid a wallet must be a live one (a few transactions on Robinhood Chain), not one made for this.
+ * (lib/season); every wallet with the points is paid, team wallets never.
  */
 import { createHash } from "node:crypto";
 import { AI_ACCESS, HELD, type RoadBlockId } from "@corbel/config";
 import { getClient } from "@corbel/data/chain";
 import { session } from "./auth";
+import { isBotWallet } from "./botRule";
 import { limitKey, sybilDb } from "./sybil";
 import { store } from "./store";
 import { tierOf } from "./tiers";
@@ -25,6 +26,8 @@ export const ACTIONS = {
   radar: { block: "check", label: "Scan new pools in Radar", pts: 1, cap: 5 },
   creator: { block: "check", label: "Look up a creator", pts: 3, cap: 5 },
   retention: { block: "check", label: "See who kept a token after buying", pts: 3, cap: 5 },
+  copycats: { block: "check", label: "Look through the copycat finder", pts: 2, cap: 3 },
+  record: { block: "check", label: "Read the public record of checks", pts: 1, cap: 3 },
   launches: { block: "check", label: "Read launch analytics", pts: 1, cap: 5 },
   address: { block: "check", label: "Check any address", pts: 3, cap: 5 },
   quote: { block: "trade", label: "Quote a swap", pts: 2, cap: 10 },
@@ -33,17 +36,21 @@ export const ACTIONS = {
   xray: { block: "wallet", label: "X-ray a wallet", pts: 5, cap: 5 },
   preview: { block: "wallet", label: "Preview a transaction before signing", pts: 5, cap: 5 },
   revoke: { block: "wallet", label: "Revoke a risky approval", pts: 20, cap: 5, onchain: true },
+  report: { block: "wallet", label: "Build a wallet report", pts: 5, cap: 2 },
   watch: { block: "wallet", label: "Follow a token or wallet", pts: 3, cap: 5 },
   paper: { block: "wallet", label: "Trade on the paper account", pts: 1, cap: 10 },
   fees: { block: "earn", label: "Read a pool's fee history", pts: 3, cap: 5 },
   health: { block: "earn", label: "Read who holds a pool's liquidity", pts: 3, cap: 5 },
   agents: { block: "agents", label: "Run an agent test on the real contract", pts: 5, cap: 5 },
+  log: { block: "agents", label: "Read the agents' decision log", pts: 2, cap: 3 },
   chat: { block: "compute", label: "Ask the AI", pts: 1, cap: 10 },
   gpu: { block: "compute", label: "Start a free GPU", pts: 10, cap: 1 },
   telegram: { block: "data", label: "Link Telegram alerts", pts: 15, cap: 1 },
   webhook: { block: "data", label: "Connect a webhook for alerts", pts: 15, cap: 1, holders: true },
   data: { block: "data", label: "Download open data", pts: 2, cap: 3 },
+  card: { block: "token", label: "Open your holder card", pts: 3, cap: 1 },
   vote: { block: "token", label: "Vote on what ships first", pts: 15, cap: 1, holders: true },
+  claim: { block: "token", label: "Claim your token's check page", pts: 50, cap: 1, onchain: true },
 } as const satisfies Record<string, { block: RoadBlockId; label: string; pts: number; cap: number; soon?: boolean; onchain?: boolean; holders?: boolean }>;
 export type Action = keyof typeof ACTIONS;
 
@@ -67,8 +74,8 @@ export const isTeam = (w: string) => team().has(w.toLowerCase());
 
 /** Points multiplier by tier: holders earn more, everyone earns. */
 export const MULT: Record<string, number> = { none: 1, light: 1.5, plus: 2, full: 3, core: 4 };
-/** A wallet with fewer transactions than this can see its points but is not paid: made for the giveaway, not for use. */
-export const MIN_TXS = 3;
+/** No transaction minimum for prizes: every wallet with the points is paid. */
+export const MIN_TXS = 0;
 
 const db = () =>
   store(
@@ -169,6 +176,8 @@ export function award(req: Request, action: Action, ref?: string): number {
     if (!d) return 0;
     const who = personOf(w), a = ACTIONS[action];
     if (isTeam(w)) return (log("team"), 0);
+    // a wallet that trades like a bot (lib/botRule, the Human vs bot volume rule) earns no points for swaps
+    if (action === "swap" && isBotWallet(w)) return (log("bot"), 0);
     if (("soon" in a && a.soon) || (action === "xray" && HELD.xray) || (action === "preview" && HELD.preview)) return (log("soon"), 0);
     const used = (d.prepare("SELECT COUNT(*) AS n FROM events WHERE who = ? AND day = ? AND action = ?").get(who, day(), action) as { n: number }).n;
     if (used >= a.cap) return (log("cap"), 0);
@@ -270,6 +279,7 @@ export const nickOf = (wallet: string) => (db()?.prepare("SELECT nick FROM profi
 /** A live wallet: enough transactions on Robinhood Chain to have been used before (cached per process for an hour). */
 const live = new Map<string, { at: number; ok: boolean }>();
 export async function isLive(wallet: string): Promise<boolean> {
+  if (MIN_TXS <= 0) return true;
   const k = wallet.toLowerCase(), hit = live.get(k);
   if (hit && Date.now() - hit.at < 3_600_000) return hit.ok;
   const c = getClient(process.env.RPC_URL);

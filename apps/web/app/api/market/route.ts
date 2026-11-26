@@ -1,3 +1,5 @@
+import { keepCandles } from "@/lib/candleStore";
+import { wantHistory } from "@/lib/candleBackfill";
 import { getClient, parseAddress, readMarket, redact, asBackground, asVisitor, gateState } from "@corbel/data/chain";
 import { launchCreator, launcherHistory, poolLauncher } from "@corbel/indexer";
 import { ensureV4, v4PoolsFor } from "@/lib/v4extra";
@@ -49,6 +51,14 @@ function compute(address: `0x${string}`, w: number): Promise<unknown> {
     .then(async (m) => {
       if (!m) return { none: true };
       t.read = Date.now() - t0 - (t.look ?? 0);
+      // keep the swaps as candles: the chart scrolls back past this read (lib/candleStore)
+      try {
+        keepCandles(address, m.trades, m.since);
+        // and read the rest of its history back to the pool's first day, in the background
+        wantHistory(address, m.head);
+      } catch {
+        // history is a convenience; the answer goes out without it
+      }
       // the token across every venue on the chain (the pairs index), next to the one pool we read swap by swap
       const pairs = await dsTokens([address.toLowerCase()]);
       const d = byToken(pairs).get(address.toLowerCase());

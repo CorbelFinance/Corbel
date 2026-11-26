@@ -34,7 +34,7 @@ export function toBars(ticks: Tick[], sec: number, end?: number): Bar[] {
   const last = end ? Math.floor(end / sec) * sec : out[out.length - 1]!.t;
   const full: Bar[] = [];
   let j = 0;
-  for (let t = Math.max(out[0]!.t, last - 300 * sec); t <= last; t += sec) {
+  for (let t = Math.max(out[0]!.t, last - 3000 * sec); t <= last; t += sec) {
     while (j < out.length && out[j]!.t < t) j++;
     if (out[j]?.t === t) full.push(out[j]!);
     else {
@@ -94,18 +94,73 @@ export function chartImage(src: HTMLCanvasElement, title: string, sub: string): 
   return c.toDataURL("image/png");
 }
 
-export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey, shareTitle }: { bars: Bar[]; mode: "candles" | "line"; unit: string; height?: number; markers?: Marker[]; drawKey?: string; shareTitle?: string }) {
+/** Liquidity by price: how much of the pool sits between this level and the one before it, in the chart's unit of money. */
+const TZ_KEY = "corbel.chart.tz";
+const TOOLS_KEY = "corbel.chart.tools";
+/** Empty slots kept right of the newest candle (a negative offset in candles). */
+const RIGHT = -4;
+const FMT = new Map<string, Intl.DateTimeFormat>();
+const fmtOf = (tz: string) => {
+  let f = FMT.get(tz);
+  if (!f) FMT.set(tz, (f = new Intl.DateTimeFormat("en-GB", { timeZone: tz, day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })));
+  return f;
+};
+/** Day, hours, minutes and seconds of a unix time in a zone ("local" = the viewer's own). */
+function parts(t: number, tz: string) {
+  const d = new Date(t * 1000);
+  const p = (x: number) => String(x).padStart(2, "0");
+  if (tz === "local") return { day: d.getDate(), hh: p(d.getHours()), mm: p(d.getMinutes()), ss: p(d.getSeconds()) };
+  const o: Record<string, string> = {};
+  for (const x of fmtOf(tz).formatToParts(d)) o[x.type] = x.value;
+  return { day: Number(o.day), hh: o.hour ?? "00", mm: o.minute ?? "00", ss: o.second ?? "00" };
+}
+/** "UTC+9" for a zone at this moment ("UTC" when no offset). */
+function offsetOf(tz: string) {
+  const now = new Date();
+  let off: number;
+  if (tz === "local") off = -now.getTimezoneOffset();
+  else {
+    const q = parts(now.getTime() / 1000, tz), u = parts(now.getTime() / 1000, "UTC");
+    off = (Number(q.hh) * 60 + Number(q.mm) - (Number(u.hh) * 60 + Number(u.mm)) + 1440 * (q.day === u.day ? 0 : q.day > u.day || (u.day > 25 && q.day < 3) ? 1 : -1)) % 1440;
+    if (off > 840) off -= 1440;
+    if (off < -720) off += 1440;
+  }
+  const a = Math.abs(off);
+  return off === 0 ? "UTC" : `UTC${off > 0 ? "+" : "-"}${Math.floor(a / 60)}${a % 60 ? `:${String(a % 60).padStart(2, "0")}` : ""}`;
+}
+/** "10:08:53 UTC+1" in the chosen zone. */
+function clockText(tz: string) {
+  const q = parts(Date.now() / 1000, tz);
+  return `${q.hh}:${q.mm}:${q.ss} ${tz === "UTC" ? "UTC" : offsetOf(tz)}`;
+}
+const zoneName = (tz: string) => (tz === "local" ? "Your time" : tz === "UTC" ? "UTC" : tz.split("/").slice(-1)[0]!.replace(/_/g, " "));
+const ZONES = (() => {
+  try {
+    return (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.("timeZone") ?? [];
+  } catch {
+    return [];
+  }
+})();
+
+export type DepthLevel = { from: number; to: number; amount: number; side: "ask" | "bid" };
+
+export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey, shareTitle, depth }: { bars: Bar[]; mode: "candles" | "line"; unit: string; height?: number; markers?: Marker[]; drawKey?: string; shareTitle?: string; depth?: DepthLevel[] }) {
   // the volume pane's height, dragged at its top edge and kept in this browser
   const [scale, setScale] = useState<Scale | null>(null);
   const [tool, setTool] = useState<Tool>("none");
   // zoom and pan: how many candles are shown, and how many of the newest are scrolled off to the right
   const [span, setSpan] = useState(120);
-  const [back, setBack] = useState(0);
+  // a few empty slots right of the newest candle, as trading charts keep, so the last candle never sits on the edge
+  const [back, setBack] = useState(RIGHT);
   // vertical pan (share of the visible price range) and vertical zoom (drag the price axis)
   const [yOff, setYOff] = useState(0);
   const [yZoom, setYZoom] = useState(1);
+  // with auto off the price range stays where the hand put it (no jump while time moves under it)
+  const [yRange, setYRange] = useState<{ top: number; bot: number } | null>(null);
+  // a released drag keeps gliding and slows down
+  const glide = useRef<{ raf: number; v: number; last: { x: number; t: number } | null }>({ raf: 0, v: 0, last: null });
   const [auto, setAuto] = useState(true);
-  const drag = useRef<{ x: number; y: number; back: number; yOff: number; yZoom: number; axis: boolean } | null>(null);
+  const drag = useRef<{ x: number; y: number; back: number; yOff: number; yZoom: number; axis: boolean; top: number; bot: number } | null>(null);
   const [grab, setGrab] = useState(false);
   const [mouse, setMouse] = useState<{ x: number; y: number } | null>(null);
   const [draws, setDraws] = useState<Drawing[]>([]);
@@ -132,14 +187,65 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
   const cv = useRef<HTMLCanvasElement>(null);
   const [w, setW] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
+  const [tools, setTools] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(TOOLS_KEY) === "0") void Promise.resolve().then(() => setTools(false));
+    } catch {
+      // storage off: shown
+    }
+  }, []);
+  const flipTools = () =>
+    setTools((v) => {
+      try {
+        localStorage.setItem(TOOLS_KEY, v ? "0" : "1");
+      } catch {
+        // convenience only
+      }
+      if (v) setTool("none");
+      return !v;
+    });
+  const [tz, setTzState] = useState("local");
+  const [tzOpen, setTzOpen] = useState(false);
+  const [tzQ, setTzQ] = useState("");
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(TZ_KEY);
+      const ok = v === "local" || v === "UTC" || (v && ZONES.includes(v));
+      if (v === "utc") void Promise.resolve().then(() => setTzState("UTC"));
+      else if (ok && v) void Promise.resolve().then(() => setTzState(v));
+    } catch {
+      // storage off: local time
+    }
+  }, []);
+  const setTz = (v: string) => {
+    setTzState(v);
+    setTzOpen(false);
+    setTzQ("");
+    try {
+      localStorage.setItem(TZ_KEY, v);
+    } catch {
+      // convenience only
+    }
+  };
+  const [clock, setClock] = useState("");
+  useEffect(() => {
+    const tick = () => setClock(clockText(tz));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [tz]);
   const n = bars.length;
-  const sp = Math.max(15, Math.min(span, n || 15));
+  const fit = span === 120 ? Math.min(6000, Math.max(24, n + 4)) : span;
+  const sp = Math.max(8, Math.min(fit, (n || 15) + 400));
   // back < 0 leaves empty space on the right; back up to n − 10 lets the oldest candles slide in from the left
-  const bk = Math.max(-Math.round(sp * 0.6), Math.min(back, Math.max(0, n - 10)));
-  const cut = Math.max(0, bk);
-  const view = useMemo(() => bars.slice(Math.max(0, n - cut - sp), n - cut), [bars, n, cut, sp]);
+  const bk = Math.max(-sp * 0.9, Math.min(back, Math.max(0, n - 3)));
+  const cut = Math.max(0, Math.floor(bk));
+  // the part of a candle the view is moved by: dragging glides instead of jumping a candle at a time
+  const frac = bk > 0 ? bk - Math.floor(bk) : 0;
+  const view = useMemo(() => bars.slice(Math.max(0, n - cut - Math.ceil(sp) - (frac > 0 ? 1 : 0)), n - cut), [bars, n, cut, sp, frac]);
   const padSlots = Math.max(0, -bk);
-  const reset = () => (setSpan(120), setBack(0), setYOff(0), setYZoom(1), setAuto(true));
+  const reset = () => (setSpan(120), setBack(RIGHT), setYOff(0), setYZoom(1), setYRange(null), setAuto(true));
   // the latest view for the wheel handler, which lives outside React's render
   const live = useRef({ sp, bk, x0: 0, step: 1 });
   useEffect(() => {
@@ -155,16 +261,17 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
       e.preventDefault();
       const side = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.shiftKey ? e.deltaY : 0;
       const L = live.current;
-      if (side) return void setBack(L.bk - Math.round(side / 12));
+      if (side) return void setBack(L.bk - side / 14);
       const r = el.getBoundingClientRect();
       const z = r.width / Math.max(1, el.offsetWidth);
       const mx = (e.clientX - r.left) / z;
       // share of the visible span left of the cursor; the candle there stays put while the span changes
       const f = Math.max(0, Math.min(1, (mx - L.x0) / Math.max(1, L.sp * L.step)));
-      const next = Math.max(15, Math.min(Math.max(15, bars.length), Math.round(L.sp * (e.deltaY > 0 ? 1.12 : 0.89))));
-      if (next === L.sp) return;
+      const d = Math.max(-120, Math.min(120, e.deltaMode === 1 ? e.deltaY * 30 : e.deltaY));
+      const next = Math.max(8, Math.min(bars.length + 400, L.sp * Math.exp(d * 0.0016)));
+      if (Math.abs(next - L.sp) < 0.01) return;
       setSpan(next);
-      setBack(L.bk + Math.round((L.sp - next) * (1 - f)));
+      setBack(L.bk + (L.sp - next) * (1 - f));
     };
     el.addEventListener("wheel", on, { passive: false });
     return () => el.removeEventListener("wheel", on);
@@ -181,7 +288,7 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
   useEffect(() => {
     const c = cv.current;
     if (!c || !w) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(3, Math.max(0.5, (window.devicePixelRatio || 1) * pageZoom()));
     c.width = w * dpr;
     c.height = height * dpr;
     const g = c.getContext("2d")!;
@@ -201,14 +308,16 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
       return s[Math.min(s.length - 1, Math.max(0, Math.round(p * (s.length - 1))))]!;
     };
     const bodies = view.flatMap((b) => [b.o, b.c]);
-    const hi = Math.max(q(view.map((b) => b.h), 0.97), ...bodies.slice(-2)), lo = Math.min(q(view.map((b) => b.l), 0.03), ...bodies.slice(-2));
+    const few = view.length < 40;
+    const hi = few ? Math.max(...view.map((b) => b.h)) : Math.max(q(view.map((b) => b.h), 0.97), ...bodies.slice(-2));
+    const lo = few ? Math.min(...view.map((b) => b.l)) : Math.min(q(view.map((b) => b.l), 0.03), ...bodies.slice(-2));
     const span = hi - lo || hi * 0.02 || 1;
     const mid = (hi + lo) / 2 + (auto ? 0 : yOff * span * 1.16), half = (span * 1.16 * (auto ? 1 : yZoom)) / 2;
-    const top = mid + half, bot = mid - half;
-    const y = (v: number) => Math.max(4, Math.min(8 + plotH + 4, 8 + ((top - v) / (top - bot)) * plotH));
-    const step = plotW / Math.max(sp + padSlots, 40);
-    const bw = Math.max(1, Math.min(14, step * 0.66));
-    const x0 = plotW - (view.length + padSlots) * step;
+    const top = !auto && yRange ? yRange.top : mid + half, bot = !auto && yRange ? yRange.bot : mid - half;
+    const y = (v: number) => 8 + ((top - v) / (top - bot)) * plotH;
+    const step = plotW / Math.max(sp + padSlots, 12);
+    const bw = Math.max(0.6, Math.min(14, step * 0.7));
+    const x0 = plotW - (view.length + padSlots - frac) * step;
     const sc = { top, bot, plotH, plotW, x0, step, t0: view[0]!.t, sec: view.length > 1 ? view[1]!.t - view[0]!.t : 60 };
     void Promise.resolve().then(() => setScale((s) => (s && s.top === sc.top && s.bot === sc.bot && s.step === sc.step && s.x0 === sc.x0 && s.t0 === sc.t0 ? s : sc)));
     // price axis
@@ -223,16 +332,31 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
       g.fillStyle = muted;
       g.fillText(fmtPx(v), plotW + 8, yy + 3);
     }
-    // volume and candles
+    // volume and candles, clipped to the plot so a pan past the price range cuts them cleanly
+    g.save();
+    g.beginPath();
+    g.rect(0, 0, plotW, height - padB);
+    g.clip();
+    const vmax = Math.max(1e-12, ...view.map((b) => b.v));
+    const vh = plotH * 0.18, vb0 = 8 + plotH + 4;
+    view.forEach((b, i) => {
+      if (!b.v) return;
+      const cx = x0 + i * step + step / 2;
+      g.fillStyle = b.c >= b.o ? "rgba(111,231,168,0.32)" : "rgba(255,69,96,0.32)";
+      const hgt = Math.max(1, (b.v / vmax) * vh);
+      g.fillRect(cx - Math.max(0.5, bw / 2), vb0 - hgt, Math.max(1, bw), hgt);
+    });
     view.forEach((b, i) => {
       const cx = x0 + i * step + step / 2;
       const up = b.c >= b.o;
       const col = up ? leaf : flesh;
       if (mode === "candles") {
         g.fillStyle = col;
-        g.fillRect(Math.round(cx) - 0.5, y(b.h), 1, Math.max(1, y(b.l) - y(b.h)));
+        const px = 1 / dpr;
+        g.fillRect(Math.round(cx * dpr) / dpr - px / 2, y(b.h), Math.max(px, 1 / dpr), Math.max(px, y(b.l) - y(b.h)));
         const yo = y(b.o), yc = y(b.c);
-        g.fillRect(cx - bw / 2, Math.min(yo, yc), bw, Math.max(1.5, Math.abs(yc - yo)));
+        const bwp = Math.max(px, Math.round(bw * dpr) / dpr);
+        g.fillRect(Math.round((cx - bwp / 2) * dpr) / dpr, Math.round(Math.min(yo, yc) * dpr) / dpr, bwp, Math.max(px * 1.5, Math.round(Math.abs(yc - yo) * dpr) / dpr));
       }
     });
     if (mode === "line") {
@@ -246,9 +370,10 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
       });
       g.stroke();
     }
+    g.restore();
     // last price
     const last = view[view.length - 1]!;
-    const ly = y(last.c);
+    const ly = Math.max(10, Math.min(height - padB - 10, y(last.c)));
     g.strokeStyle = last.c >= last.o ? leaf : flesh;
     g.setLineDash([2, 3]);
     g.beginPath();
@@ -262,11 +387,20 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
     g.fillText(fmtPx(last.c), plotW + 8, ly + 3);
     // time axis
     g.fillStyle = muted;
-    const every = Math.max(1, Math.round(view.length / 6));
+    const every = Math.max(1, Math.round(view.length / 7));
+    let lastDay = -1;
     view.forEach((b, i) => {
-      if (i % every) return;
-      const d = new Date(b.t * 1000);
-      g.fillText(`${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`, x0 + i * step, height - 8);
+      const p = parts(b.t, tz);
+      const newDay = p.day !== lastDay && lastDay !== -1;
+      lastDay = p.day;
+      if (i % every && !newDay) return;
+      const x = x0 + i * step;
+      if (x < 0 || x > plotW - 24) return;
+      if (newDay) {
+        g.fillStyle = text;
+        g.fillText(String(p.day), x, height - 8);
+        g.fillStyle = muted;
+      } else g.fillText(`${p.hh}:${p.mm}`, x, height - 8);
     });
     // liquidity added (green, up) or taken out (red, down), on the time axis
     if (view.length > 1) {
@@ -332,7 +466,8 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
       g.globalAlpha = 1;
       // the time of the candle under the cursor, as a tag on the time axis right below it
       const d = new Date(view[hover]!.t * 1000);
-      const label = `${d.toLocaleDateString("en", { day: "numeric", month: "short", timeZone: "UTC" })}  ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+      const pp = parts(view[hover]!.t, tz);
+      const label = `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "2-digit", timeZone: tz === "local" ? undefined : tz }).replace(",", "")}  ${pp.hh}:${pp.mm}`;
       g.font = "10px JB, ui-monospace, monospace";
       const tw = g.measureText(label).width + 14;
       const tx = Math.max(0, Math.min(plotW - tw, cx - tw / 2));
@@ -342,7 +477,7 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
       g.fillText(label, tx + 7, height - padB + 14.5);
     }
     g.fillStyle = text;
-  }, [view, w, height, mode, hover, mouse, markers, yOff, yZoom, auto, sp, padSlots]);
+  }, [view, w, height, mode, hover, mouse, markers, yOff, yZoom, yRange, auto, sp, padSlots, depth, tz, frac]);
 
   const hb = hover !== null ? view[hover] : view[view.length - 1];
   return (
@@ -375,11 +510,26 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
           const r = e.currentTarget.getBoundingClientRect();
           e.currentTarget.setPointerCapture(e.pointerId);
           const z = pageZoom();
-          drag.current = { x: e.clientX / z, y: e.clientY / z, back: bk, yOff, yZoom, axis: (e.clientX - r.left) / z > r.width / z - 78 };
+          cancelAnimationFrame(glide.current.raf);
+          glide.current = { raf: 0, v: 0, last: { x: e.clientX / z, t: performance.now() } };
+          drag.current = { x: e.clientX / z, y: e.clientY / z, back: bk, yOff, yZoom, axis: (e.clientX - r.left) / z > r.width / z - 78, top: scale?.top ?? 0, bot: scale?.bot ?? 0 };
           setGrab(true);
         }}
         onPointerUp={(e) => {
+          const was = drag.current;
           drag.current = null;
+          // let go while moving: the chart keeps gliding through time and slows down
+          const g0 = glide.current;
+          if (was && !was.axis && scale && Math.abs(g0.v) > 0.05 && performance.now() - (g0.last?.t ?? 0) < 80) {
+            let v = g0.v;
+            const stepPx = scale.step;
+            const run = () => {
+              v *= 0.93;
+              setBack((b) => b + (v * 16) / stepPx);
+              if (Math.abs(v) > 0.02) glide.current.raf = requestAnimationFrame(run);
+            };
+            glide.current.raf = requestAnimationFrame(run);
+          }
           setGrab(false);
           if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
         }}
@@ -392,13 +542,27 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
           const d = drag.current;
           if (d && scale) {
             const dy = e.clientY / z - d.y;
+            const rng = d.top - d.bot || 1;
             if (d.axis) {
+              // the price axis: drag down to see more of the price, up to see less, around the middle
               setAuto(false);
-              setYZoom(Math.max(0.1, Math.min(20, d.yZoom * Math.exp(dy / 200))));
+              const k = Math.max(0.05, Math.min(20, Math.exp(dy / 180)));
+              const mid = (d.top + d.bot) / 2;
+              setYRange({ top: mid + (rng / 2) * k, bot: mid - (rng / 2) * k });
             } else {
-              setBack(Math.round(d.back + (e.clientX / z - d.x) / scale.step));
-              // with the auto scale on, a drag moves through time only; the price follows the candles
-              if (!auto) setYOff(d.yOff + (dy / scale.plotH) * d.yZoom);
+              setBack(d.back + (e.clientX / z - d.x) / scale.step);
+              // a drag with any up or down in it takes the price along, like every trading chart
+              if (!auto || Math.abs(dy) > 6) {
+                if (auto) setAuto(false);
+                const sh = (dy / scale.plotH) * rng;
+                setYRange({ top: d.top + sh, bot: d.bot + sh });
+              }
+              const now = performance.now(), L = glide.current.last;
+              if (L) {
+                const dt = Math.max(1, now - L.t);
+                glide.current.v = 0.7 * glide.current.v + 0.3 * ((e.clientX / z - L.x) / dt);
+              }
+              glide.current.last = { x: e.clientX / z, t: now };
             }
           }
           if (!scale) return;
@@ -481,8 +645,17 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
           })()}
         </svg>
       )}
-      {drawKey && (
-        <div className="absolute left-2 top-9 z-10 flex flex-col gap-0.5 rounded-xl border border-[#242424] bg-[#0d0d0d]/90 p-1 backdrop-blur">
+      {drawKey && !tools && (
+        <button type="button" onClick={flipTools} title="Show the drawing tools" aria-label="Show the drawing tools" className="absolute left-2 top-9 z-10 grid h-8 w-8 place-items-center rounded-lg border border-[#242424] bg-[#0d0d0d]/90 font-mono text-[14px] text-muted backdrop-blur transition-colors hover:text-text">
+          ✎
+        </button>
+      )}
+      {drawKey && tools && (
+        <div className="chart-tools absolute left-2 top-9 z-10 flex flex-col gap-0.5 rounded-xl border border-[#242424] bg-[#0d0d0d]/90 p-1 backdrop-blur">
+          <button type="button" onClick={flipTools} title="Hide the drawing tools" aria-label="Hide the drawing tools" className="grid h-6 w-8 place-items-center rounded-md font-mono text-[11px] text-muted hover:bg-[#181818] hover:text-text">
+            ‹
+          </button>
+          <span className="mb-0.5 h-px bg-[#242424]" />
           {(
             [
               ["h", "─", "Horizontal line"],
@@ -511,12 +684,35 @@ export function Candles({ bars, mode, unit, height = 420, markers = [], drawKey,
         </div>
       )}
       <span className="absolute bottom-6 right-2 flex gap-1">
-        {(back !== 0 || span !== 120) && (
-          <button type="button" onClick={() => (setBack(0), setSpan(120))} title="Back to the newest candle" className="rounded-md border border-line bg-[#0e0e0e]/90 px-2 py-0.5 font-mono text-[12px] text-text hover:border-ui/60">
+        <span className="relative">
+          <button type="button" onClick={() => setTzOpen((o) => !o)} aria-expanded={tzOpen} title="Time zone of the chart: click to pick any" className={cx("rounded-md border bg-[#0e0e0e]/90 px-2 py-0.5 font-mono text-[12px] text-text hover:border-ui/60", tzOpen ? "border-ui/60" : "border-line")}>
+            {clock}
+          </button>
+          {tzOpen && (
+            <div role="dialog" aria-label="Time zone" className="chart-tz absolute bottom-8 right-0 z-30 w-64 overflow-hidden rounded-lg border border-[#2a2a2a] bg-[#141414] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.9)]">
+              <input autoFocus value={tzQ} onChange={(e) => setTzQ(e.target.value)} placeholder="Search a city or zone" aria-label="Search a time zone" className="h-9 w-full border-b border-[#2a2a2a] bg-transparent px-3 text-[12.5px] text-text outline-none placeholder:text-muted" onKeyDown={(e) => e.key === "Escape" && setTzOpen(false)} />
+              <ul className="max-h-64 overflow-y-auto py-1 [scrollbar-width:thin]">
+                {["local", "UTC", ...ZONES.filter((z) => z !== "UTC")]
+                  .filter((z) => !tzQ || `${z} ${zoneName(z)}`.toLowerCase().includes(tzQ.toLowerCase()))
+                  .slice(0, 200)
+                  .map((z) => (
+                    <li key={z}>
+                      <button type="button" onClick={() => setTz(z)} className={cx("flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[12.5px] hover:bg-[#1c1c1c]", z === tz ? "text-leaf" : "text-text")}>
+                        <span className="truncate">{z === "local" || z === "UTC" ? zoneName(z) : z.replace(/_/g, " ")}</span>
+                        <span className="shrink-0 font-mono text-[11px] text-muted">{offsetOf(z)}</span>
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+        </span>
+        {(Math.abs(back - RIGHT) > 0.5 || span !== 120) && (
+          <button type="button" onClick={() => (setBack(RIGHT), setSpan(120))} title="Back to the whole history (or double-click the chart)" className="rounded-md border border-line bg-[#0e0e0e]/90 px-2 py-0.5 font-mono text-[12px] text-text hover:border-ui/60">
             {"Now →"}
           </button>
         )}
-        <button type="button" onClick={() => (setAuto(true), setYOff(0), setYZoom(1))} aria-pressed={auto} title="Fit the price to the visible candles" className={cx("rounded-md border px-2 py-0.5 font-mono text-[12px]", auto ? "border-leaf/50 bg-leaf/15 text-leaf" : "border-line bg-[#0e0e0e]/90 text-muted hover:text-text")}>
+        <button type="button" onClick={() => (setAuto(true), setYOff(0), setYZoom(1), setYRange(null))} aria-pressed={auto} title="Fit the price to the visible candles" className={cx("rounded-md border px-2 py-0.5 font-mono text-[12px]", auto ? "border-leaf/50 bg-leaf/15 text-leaf" : "border-line bg-[#0e0e0e]/90 text-muted hover:text-text")}>
           auto
         </button>
         {shareTitle && view.length > 0 && (

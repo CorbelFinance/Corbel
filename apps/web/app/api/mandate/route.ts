@@ -16,7 +16,7 @@ const cache = new Map<string, { at: number; body: unknown }>();
 
 async function handle(req: Request) {
   const u = new URL(req.url).searchParams;
-  if (u.get("log") !== null) return Response.json(readLog() ?? { entries: [], totals: null });
+  if (u.get("log") !== null) return (award(req, "log"), Response.json(readLog() ?? { entries: [], totals: null }));
   const id = u.get("s");
   if (!id) return Response.json({ scenarios: SCENARIOS.map(describeScenario) });
   if (!SCENARIOS.some((s) => s.id === id)) return Response.json({ error: "Unknown scenario." }, { status: 400 });

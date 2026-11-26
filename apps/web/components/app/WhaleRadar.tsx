@@ -16,7 +16,7 @@ import { short } from "./kit";
 import { TokenAvatar } from "./TokenAvatar";
 
 type Row = { token: string; symbol: string; t: number; side: "buy" | "sell"; usd: number; amount: number; price: number; who: string; tx: string; signer?: boolean };
-type Res = { rows: Row[]; tokens: number; since: number | null };
+type Res = { rows: Row[]; tokens: number; since: number | null; kept?: number };
 const usd = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(2)}M` : v >= 1e3 ? `$${(v / 1e3).toFixed(1)}K` : `$${v.toFixed(0)}`);
 const ago = (s: number, now: number) => {
   const d = Math.max(0, now - s);
@@ -137,7 +137,8 @@ export function WhaleRadar() {
           <div key={k} className="bg-(--bay-bg) px-5 py-3">
             <p className="text-[13px] text-muted">{`${k} in big swaps`}</p>
             <p className={cx("font-mono text-[22px]", c)}>
-              <CountUp value={v} fmt={(x) => `${x < 0 ? "−" : ""}${usd(Math.abs(x))}`} />
+              {/* nothing collected yet is not "$0 traded": it shows a dash until the first swaps are in */}
+              {!res || (res.kept ?? res.rows.length) === 0 ? <span className="text-muted">—</span> : <CountUp value={v} fmt={(x) => `${x < 0 ? "−" : ""}${usd(Math.abs(x))}`} />}
             </p>
           </div>
         ))}

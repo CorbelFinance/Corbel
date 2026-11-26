@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     const m = typeof j?.model === "string" ? findModel(j.model) : null;
     if (!m) return Response.json({ error: "Pick a model." }, { status: 400 });
     const tier = tierOf(s.address);
-    if (m.id.startsWith("x:") && !hasFull(tier)) return Response.json({ error: `This model is for Full holders: ${FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
+    if (m.id.startsWith("x:") && !hasFull(tier)) return Response.json({ error: `This model is for ${FULL_TIER.name} holders and above: ${FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
     // a model that starts from a file gets the one this wallet uploaded; tools may run with no words at all
     const needs = (m as { needs?: "image" | "video" | null }).needs ?? null;
     const isTool = !!(m as { tool?: boolean }).tool;

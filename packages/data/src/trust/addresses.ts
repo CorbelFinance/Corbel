@@ -9,12 +9,17 @@ export const RH = {
   V2_FACTORY: "0x8bceaa40b9acdfaedf85adf4ff01f5ad6517937f", // 148k pairs, emits PairCreated
   V2_ROUTER: "0x89e5db8b5aa49aa85ac63f691524311aeb649eba", // factory() and WETH() match the above
   V4_POOL_MANAGER: "0x8366a39cc670b4001a1121b8f6a443a643e40951", // emits Initialize/Swap
+  /** more pair factories of the same V2 kind (found on chain 2026-11-25: 1,157 pairs in a day and a half) */
+  V2_FACTORIES_MORE: ["0x0d1ebb179cdbca88d74c923c4255cb2b17474afd"] as string[],
+  /** the V3 factory a launchpad graduates into (emits PoolCreated) */
+  V3_FACTORY: "0x1f7d7550b1b028f7571e69a784071f0205fd2efa",
   NATIVE: "0x0000000000000000000000000000000000000000",
 } as const;
 
 export const TOPICS = {
   V2_PAIR_CREATED: "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9",
   V4_INITIALIZE: "0xdd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438",
+  V3_POOL_CREATED: "0x783cca1c0412dd0d695e784568c96da2e9c22ff989357a2e8b1d9b2b4e6b7118",
   /** ModifyLiquidity(bytes32 indexed id, address indexed sender, int24, int24, int256 liquidityDelta, bytes32 salt) */
   V4_MODIFY_LIQUIDITY: "0xf208f4912782fd25c7f114ca3723a2d5dd6f3bcc3ac8db5af63baa85f711d5ec",
 } as const;

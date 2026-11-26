@@ -54,10 +54,24 @@ export function watchedBy(owner: string): string[] {
 }
 
 /** Every distinct wallet on anyone's watchlist (for the drain alarm). */
-export function watchedAddresses(limit = 60): string[] {
+export function watchedAddresses(limit = 60, owners?: (owner: string) => boolean | number | null): string[] {
   const d = db();
   if (!d) return [];
-  return (d.prepare("SELECT value FROM watch WHERE kind = 'address' GROUP BY value ORDER BY COUNT(*) DESC LIMIT ?").all(limit) as { value: string }[]).map((r) => r.value.toLowerCase());
+  if (!owners) return (d.prepare("SELECT value FROM watch WHERE kind = 'address' GROUP BY value ORDER BY COUNT(*) DESC LIMIT ?").all(limit) as { value: string }[]).map((r) => r.value.toLowerCase());
+  // only wallets watched by at least one owner who passes (the drain alarm for holders)
+  // owners() answers false (none), true or null (no limit), or how many of the owner's wallets count, oldest first
+  const rows = d.prepare("SELECT value, owner FROM watch WHERE kind = 'address' ORDER BY rowid").all() as { value: string; owner: string }[];
+  const n = new Map<string, number>();
+  const taken = new Map<string, number>();
+  for (const r of rows) {
+    const q = owners(r.owner);
+    if (q === false || q === 0) continue;
+    const k = (taken.get(r.owner) ?? 0) + 1;
+    if (typeof q === "number" && k > q) continue;
+    taken.set(r.owner, k);
+    n.set(r.value.toLowerCase(), (n.get(r.value.toLowerCase()) ?? 0) + 1);
+  }
+  return [...n.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([v]) => v);
 }
 
 /** The wallets one owner watches. */

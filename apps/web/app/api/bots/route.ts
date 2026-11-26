@@ -1,5 +1,6 @@
 import { loadSnap } from "@/lib/snapshot";
 import { guardWait } from "@/lib/guard";
+import { BOT_GAP_S, BOT_SWAPS } from "@/lib/botRule";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,8 +10,6 @@ export const runtime = "nodejs";
  * tokens Corbel reads swap by swap). A wallet counts as a bot by a stated rule, not a guess: more than BOT_SWAPS swaps
  * in the day, or a median gap of under BOT_GAP_S seconds between its swaps once it has made at least 5. Cached 5 min.
  */
-const BOT_SWAPS = 50;
-const BOT_GAP_S = 60;
 /**
  * A single swap worth more than this is left out: the deepest pool on the chain holds a few hundred thousand dollars,
  * so a bigger "swap" comes from a token whose price reads are broken, not from a real trade.

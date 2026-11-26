@@ -48,6 +48,19 @@ describe("points follow effort", () => {
   });
 });
 
+describe("the newest tools earn points", () => {
+  it("copycat finder, public record, decision log and holder card each count up to their cap", () => {
+    const W3 = "0x00000000000000000000000000000000000000d4";
+    for (const id of ["copycats", "record", "log", "card"] as const) {
+      const a = P.ACTIONS[id];
+      expect(a.pts, id).toBeLessThanOrEqual(3);
+      let got = 0;
+      for (let i = 0; i < a.cap + 3; i++) got += P.award(req(W3), id);
+      expect(got, id).toBe(a.pts * a.cap);
+    }
+  });
+});
+
 describe("nothing gets lost", () => {
   it("logs every attempt with its outcome, and the audit finds no missing points", () => {
     const W2 = "0x00000000000000000000000000000000000000c3";

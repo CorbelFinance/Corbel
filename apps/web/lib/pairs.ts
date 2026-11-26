@@ -108,7 +108,8 @@ export function byToken(pairs: DsPair[]) {
     if (liq > r.best) {
       r.best = liq;
       r.price = p.priceUsd ? Number(p.priceUsd) : null;
-      r.change = p.priceChange?.h24 ?? null;
+      // a pool younger than a day has no 24-hour change: its "change" runs from the launch price (+300,000%)
+      r.change = p.pairCreatedAt && Date.now() - p.pairCreatedAt < 86_400_000 ? null : (p.priceChange?.h24 ?? null);
     }
   }
   return m;

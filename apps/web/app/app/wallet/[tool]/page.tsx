@@ -6,6 +6,7 @@ import { Exposure } from "@/components/app/Exposure";
 import { PaperBook } from "@/components/app/PaperBook";
 import { ShareLink } from "@/components/app/ShareLink";
 import { StressTest } from "@/components/app/StressTest";
+import { WalletReport } from "@/components/app/WalletReport";
 import { WalletXray } from "@/components/app/WalletXray";
 import { TxPreview } from "@/components/app/TxPreview";
 import { HELD } from "@corbel/config";
@@ -15,6 +16,7 @@ const ALL_TOOLS = [
   { id: "approvals", label: "Approvals", line: "Who can move your tokens" },
   { id: "xray", label: "X-ray", line: "What a sale really pays" },
   { id: "preview", label: "Before you sign", line: "What a transaction moves" },
+  { id: "report", label: "Report", line: "Trades, results, tax file" },
   { id: "exposure", label: "Exposure", line: "How others see it" },
   { id: "stress", label: "Stress test", line: "After a fall" },
   { id: "paper", label: "Paper account", line: "Real fills, no money" },
@@ -55,7 +57,7 @@ export default async function WalletTool({ params }: { params: Promise<{ tool: s
         </nav>
       </div>
       <h1 className="sr-only">{t.label}</h1>
-      <div className="mt-4">{(({ approvals: <Approvals />, xray: <WalletXray />, preview: <TxPreview />, exposure: <Exposure />, stress: <StressTest />, paper: <PaperBook />, share: <ShareLink /> }) as Record<Id, React.ReactNode>)[t.id]}</div>
+      <div className="mt-4">{(({ approvals: <Approvals />, xray: <WalletXray />, preview: <TxPreview />, report: <WalletReport />, exposure: <Exposure />, stress: <StressTest />, paper: <PaperBook />, share: <ShareLink /> }) as Record<Id, React.ReactNode>)[t.id]}</div>
       <WhatCanGoWrong items={RISKS} />
     </>
   );

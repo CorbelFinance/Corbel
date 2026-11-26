@@ -57,6 +57,8 @@ async function retry<T>(fn: () => Promise<T>): Promise<T | null> {
   return null;
 }
 
+const baseAddr = (sym: string) => (sym.toUpperCase() === "USDG" ? RH.USDG : RH.WETH).toLowerCase();
+
 function row(m: Market): Row | null {
   if (m.pool.kind !== "v2" || !m.reserves) return null;
   const usd = m.base.usd || 0;
@@ -73,7 +75,8 @@ function row(m: Market): Row | null {
     net: liquidity > 0 ? fees / liquidity + ilw : null,
     move: ratio ? ratio - 1 : null,
     token: m.token.address,
-    baseIs0: m.pool.base.toLowerCase() < m.token.address.toLowerCase(),
+    // the pool's base comes as a symbol (WETH, USDG): its address decides which side of the pair it is
+    baseIs0: baseAddr(m.pool.base) < m.token.address.toLowerCase(),
     tokenDec: m.token.decimals,
     symbol: m.token.symbol,
     name: m.token.name,
@@ -135,7 +138,7 @@ function refresh() {
     state.snap = { at: Date.now(), rows: deep.slice(0, POOLS), hidden: scanned - deep.length, ms: Date.now() - t0 };
     state.err = null;
     // the day-by-day record: top up to the head, backfill toward thirty days (background, never twice at once)
-    syncHistory(client, state.snap.rows.filter((r) => r.baseIs0 !== undefined).map((r) => ({ pair: r.pair.toLowerCase(), baseIs0: !!r.baseIs0, baseDec: r.base.toLowerCase() === RH.USDG.toLowerCase() ? 6 : 18, tokenDec: r.tokenDec ?? 18 })));
+    syncHistory(client, state.snap.rows.filter((r) => r.baseIs0 !== undefined).map((r) => ({ pair: r.pair.toLowerCase(), baseIs0: !!r.baseIs0, baseDec: r.base.toUpperCase() === "USDG" || r.base.toLowerCase() === RH.USDG.toLowerCase() ? 6 : 18, tokenDec: r.tokenDec ?? 18 })));
   })
     .catch((e) => {
       console.error("[api/earn]", redact(e));

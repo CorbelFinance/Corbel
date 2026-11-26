@@ -78,6 +78,7 @@ export function OrderPlanner() {
   const [ref, setRef] = useState<number | null>(null);
   const [block, setBlock] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [hover, setHover] = useState<number | null>(null);
 
   useEffect(() => {
     let off = false;
@@ -104,7 +105,7 @@ export function OrderPlanner() {
     setFloor(DEFAULTS[k].floor);
   }
 
-  const n = Math.max(1, Math.min(60, Math.round(num(slices, 1))));
+  const n = kind === "limit" ? 1 : Math.max(1, Math.min(60, Math.round(num(slices, 1))));
   const amt = num(amount, 0);
   const pct = Number(floor.replace(",", "."));
   const off = Number.isFinite(pct) ? pct : 0;
@@ -112,129 +113,143 @@ export function OrderPlanner() {
   const gap = kind === "limit" ? 0 : Math.max(0, num(every, 0));
   const px = ref ? ref * (1 + off / 100) : null;
   const each = amt / n;
-  const rows = Array.from({ length: Math.min(n, 12) }, (_, i) => i);
   const span = gap * (n - 1);
+  const rows = Array.from({ length: n }, (_, i) => i);
+  const when = (i: number) =>
+    kind === "limit" ? "When the floor is met" : i === 0 ? "At once" : `+${fmtNum(gap * i, 4)} ${unit === "day" ? (gap * i === 1 ? "day" : "days") : "min"}`;
+  const LINE: Record<Kind, string> = {
+    limit: "One order that waits until the pool pays your floor or better.",
+    dca: "Equal slices, one per period, each with its own floor.",
+    twap: "Size split into slices minutes apart, so no single big print moves the pool.",
+  };
 
   return (
-    <Instrument
-      code="T-10"
-      title="Order planner"
-      status={<Led tone="off" label="Plan · nothing is placed" />}
-      foot={
-        <>
-          <span>
+    <section id="planner" className="op scroll-mt-24" aria-label="Order planner">
+      <header className="op-head">
+        <div className="min-w-0">
+          <h2>Order planner</h2>
+          <p>{LINE[kind]}</p>
+        </div>
+        <div className="op-modes" role="group" aria-label="Order type">
+          {KINDS.map((k) => (
+            <button key={k.id} type="button" aria-pressed={kind === k.id} onClick={() => pick(k.id)}>
+              {k.label}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <div className="op-grid">
+        <div className="op-form">
+          <label className="op-field">
+            <span>Sell in total</span>
+            <span className="op-input">
+              <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" autoComplete="off" spellCheck={false} maxLength={12} />
+              <em>ETH</em>
+            </span>
+          </label>
+          {kind !== "limit" && (
+            <label className="op-field">
+              <span>Slices</span>
+              <span className="op-input">
+                <input value={slices} onChange={(e) => setSlices(e.target.value)} inputMode="numeric" autoComplete="off" spellCheck={false} maxLength={3} />
+                <em>1 to 60</em>
+              </span>
+            </label>
+          )}
+          {kind !== "limit" && (
+            <label className="op-field">
+              <span>Every</span>
+              <span className="op-input">
+                <input value={every} onChange={(e) => setEvery(e.target.value)} inputMode="decimal" autoComplete="off" spellCheck={false} maxLength={6} />
+                <em>{unit === "day" ? "days" : "min"}</em>
+              </span>
+            </label>
+          )}
+          <label className="op-field">
+            <span>Floor against the live price</span>
+            <span className="op-input">
+              <input value={floor} onChange={(e) => setFloor(e.target.value)} inputMode="decimal" autoComplete="off" spellCheck={false} maxLength={6} />
+              <em>%</em>
+            </span>
+            <small>{off >= 0 ? "Above the price: waits for a better one." : "Below the price: accepts a worse one to fill."}</small>
+          </label>
+          <p className="op-live">
+            <i data-on={ref ? "" : undefined} />
             {ref
-              ? `Live price ${fmtNum(ref, 2)} USDG per ETH · block ${Number(block).toLocaleString("en")}`
+              ? `Live price ${fmtNum(ref, 2)} USDG per ETH · block ${Number(block).toLocaleString("en-US")}`
               : failed
-                ? "Live price unavailable: enter your own floor below"
+                ? "Live price unavailable: the floor is still worked out from your numbers."
                 : "Reading the live price…"}
-          </span>
-          <span>ETH → USDG</span>
-        </>
-      }
-    >
-      <div className="flex flex-wrap items-center gap-4 border-b border-line p-4">
-        <Seg label="Order type" value={kind} options={KINDS} onChange={pick} />
-        <p className="font-medium text-[12px] uppercase tracking-[0.08em] text-muted">
-          {kind === "limit"
-            ? "One slice, fills when the pool pays your floor or better"
-            : kind === "dca"
-              ? "One slice per day, each with its own floor"
-              : "One slice per few minutes, to trade size without one big print"}
-        </p>
-      </div>
-      <div className="grid gap-4 border-b border-line p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Field id="op-amt" label="Sell in total" value={amount} onChange={setAmount} suffix="ETH" />
-        <Field
-          id="op-n"
-          label="Slices"
-          value={slices}
-          onChange={setSlices}
-          hint={kind === "limit" ? "A limit is one slice" : "1 to 60"}
-        />
-        {kind !== "limit" && (
-          <Field
-            id="op-gap"
-            label={kind === "dca" ? "Every" : "Every"}
-            value={every}
-            onChange={setEvery}
-            suffix={unit === "day" ? "days" : "min"}
-          />
-        )}
-        <Field
-          id="op-floor"
-          label="Floor vs live price"
-          value={floor}
-          onChange={setFloor}
-          suffix="%"
-          hint={kind === "limit" ? "+ above: waits for a better price" : "− below: accepts a worse price"}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-px border-b border-line bg-line lg:grid-cols-4">
-        <Readout label="Each slice" value={`${fmtNum(each, 6)} ETH`} />
-        <Readout label="Floor price" value={px ? `${fmtNum(px, 2)}` : "—"} sub="USDG per ETH" dim={!px} />
-        <Readout
-          label="Least you receive"
-          value={px ? `${fmtNum(amt * px, 2)}` : "—"}
-          sub="USDG, if every slice fills"
-          dim={!px}
-        />
-        <Readout
-          label="Runs for"
-          value={
-            kind === "limit" ? "until it fills" : `${fmtNum(span, 4)} ${unit === "day" ? "days" : "min"}`
-          }
-          sub={kind === "limit" ? "or you cancel" : `${n} slices`}
-        />
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] border-collapse text-left text-sm">
-          <caption className="sr-only">Planned slices</caption>
-          <thead>
-            <tr className="border-b border-line">
-              {["Slice", "When", "Sells", "Floor price", "Least out"].map((h) => (
-                <th
-                  key={h}
-                  scope="col"
-                  className="px-4 py-3 font-medium text-[12px] font-normal uppercase tracking-[0.08em] text-muted"
-                >
-                  {h}
-                </th>
+          </p>
+        </div>
+
+        <div className="op-out">
+          <dl className="op-figs">
+            <div>
+              <dt>Each slice</dt>
+              <dd>{fmtNum(each, 6)} <small>ETH</small></dd>
+            </div>
+            <div>
+              <dt>Floor price</dt>
+              <dd className={px ? "" : "op-wait"}>{px ? fmtNum(px, 2) : "…"} <small>USDG</small></dd>
+            </div>
+            <div>
+              <dt>Least you receive</dt>
+              <dd className={px ? "op-good" : "op-wait"}>{px ? fmtNum(amt * px, 2) : "…"} <small>USDG</small></dd>
+            </div>
+            <div>
+              <dt>Runs for</dt>
+              <dd>{kind === "limit" ? "Until filled" : <>{fmtNum(span, 4)} <small>{unit === "day" ? "days" : "min"}</small></>}</dd>
+            </div>
+          </dl>
+
+          {/* the plan drawn: one bar per slice along the run, the floor as a line against the live price */}
+          <div className="op-chart" aria-hidden>
+            <div className="op-chart-head">
+              <span>Plan</span>
+              <span>{kind === "limit" ? "1 order" : `${n} slices over ${fmtNum(span, 4)} ${unit === "day" ? "days" : "min"}`}</span>
+            </div>
+            <div className="op-bars" style={{ ["--n" as string]: n }} onMouseLeave={() => setHover(null)}>
+              <span className="op-ref" />
+              <span className="op-floor" style={{ bottom: `${70 + Math.max(-26, Math.min(26, off * 4))}%` }}>
+                <b>{off >= 0 ? "+" : ""}{fmtNum(off, 2)}%</b>
+              </span>
+              {rows.map((i) => (
+                <span key={`${kind}-${n}-${i}`} className="op-bar" data-on={hover === i ? "" : undefined} style={{ animationDelay: `${Math.min(i, 40) * 18}ms` }} onMouseEnter={() => setHover(i)} />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((i) => (
-              <tr key={i} className="irow border-b border-line last:border-0">
-                <td className="px-4 py-2.5 font-mono text-xs text-leaf">{String(i + 1).padStart(2, "0")}</td>
-                <td className="px-4 py-2.5 font-mono text-xs text-muted">
-                  {kind === "limit"
-                    ? "when the floor is met"
-                    : i === 0
-                      ? "at once"
-                      : `+${fmtNum(gap * i, 4)} ${unit === "day" ? "d" : "min"}`}
-                </td>
-                <td className="px-4 py-2.5 font-mono text-xs text-text">{fmtNum(each, 6)} ETH</td>
-                <td className="px-4 py-2.5 font-mono text-xs text-text">{px ? fmtNum(px, 2) : "—"}</td>
-                <td className="px-4 py-2.5 font-mono text-xs text-text">
-                  {px ? `${fmtNum(each * px, 2)} USDG` : "—"}
-                </td>
-              </tr>
-            ))}
-            {n > rows.length && (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-2.5 font-medium text-[12px] uppercase tracking-[0.08em] text-muted"
-                >
-                  + {n - rows.length} more slices, the same way
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </div>
+            <div className="op-chart-foot">
+              <span>{hover != null ? `Slice ${hover + 1} · ${when(hover)}` : "Now"}</span>
+              <span>{kind === "limit" ? "Waits for the floor" : `+${fmtNum(span, 4)} ${unit === "day" ? "d" : "min"}`}</span>
+            </div>
+          </div>
+        </div>
       </div>
-    </Instrument>
+
+      <div className="op-list-head">
+        <span>Slice</span>
+        <span>When</span>
+        <span className="num">Sells</span>
+        <span className="num">Floor</span>
+        <span className="num">Least out</span>
+      </div>
+      <ol className="op-list v2-scroll">
+        {rows.map((i) => (
+          <li key={`${kind}-${i}`} data-on={hover === i ? "" : undefined} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} style={{ animationDelay: `${Math.min(i, 14) * 30}ms` }}>
+            <span className="op-n">{String(i + 1).padStart(2, "0")}</span>
+            <span className="op-when">{when(i)}</span>
+            <span className="num">{fmtNum(each, 6)} ETH</span>
+            <span className="num">{px ? fmtNum(px, 2) : "…"}</span>
+            <span className="num op-good">{px ? `${fmtNum(each * px, 2)} USDG` : "…"}</span>
+          </li>
+        ))}
+      </ol>
+      <footer className="op-foot">
+        <span>A plan, nothing is placed. Every figure comes from your numbers and the live pool price.</span>
+        <span>ETH → USDG</span>
+      </footer>
+    </section>
   );
 }
 

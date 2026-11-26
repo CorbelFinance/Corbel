@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { encodeFunctionData } from "viem";
 import { cx } from "@corbel/ui";
+import { AI_ACCESS } from "@corbel/config";
 import { useSession } from "../app/session";
 import { niceError, ready, send, waitReceipt, EXPLORER } from "../app/walletTx";
 
@@ -19,7 +20,12 @@ type Data = {
   minTopUp: number;
   maxCap: number;
   signedIn: boolean;
+  tier?: string | null;
+  bonusRate?: number;
+  bonusCap?: number;
   balance?: number;
+  bonus?: number;
+  bonuses?: { tx: string; usd: number; rate: number; at: number }[];
   deposited?: number;
   spent?: number;
   deposits?: { tx: string; usd: number; block: number; at: number }[];
@@ -89,8 +95,8 @@ export function CreditsAccount() {
 
   return shell(
     <>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        {([["Balance", d.balance ?? 0], ["Topped up", d.deposited ?? 0], ["Spent", d.spent ?? 0]] as const).map(([k, v]) => (
+      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        {([["Balance", d.balance ?? 0], ["Topped up", d.deposited ?? 0], ["Holder bonus", d.bonus ?? 0], ["Spent", d.spent ?? 0]] as const).map(([k, v]) => (
           <div key={k} className="rounded-2xl border border-[#3a2418] bg-[#140d0a]/90 p-4">
             <p className="font-mono text-[12px] text-[#a8907f]">{k}</p>
             <p className="mt-1 font-mono text-2xl tabular-nums text-text">{usd(v)}</p>
@@ -101,7 +107,18 @@ export function CreditsAccount() {
       <div className="mt-6 rounded-2xl border border-[#3a2418] bg-[#0d0907] p-4">
         <p className="font-mono text-[12px] uppercase tracking-[0.1em] text-[#ff9a5c]">Top up with USDG</p>
         <p className="mt-2 text-[14px] text-text">Credits are spent only. They are never paid back out, so top up what you will use.</p>
-        <p className="mt-1 text-[13px] text-[#d8c2b4]">{`Models and GPUs are charged at the provider's price plus ${Math.round(d.markup * 100)}%. The transfer goes to ${d.treasury}, from your own wallet; you sign it.`}</p>
+        <p className="mt-1 text-[13px] text-[#d8c2b4]">{`Models and GPUs are charged at the provider's price ${d.markup ? `plus ${+(d.markup * 100).toFixed(1)}%` : "with no markup"}. The transfer goes to ${d.treasury}, from your own wallet; you sign it.`}</p>
+        <p className="mt-1 text-[13px] text-[#d8c2b4]">
+          {d.bonusRate ? (
+            <>
+              {`As a ${d.tier} holder you get `}
+              <b className="font-semibold text-leaf">{`+${+(d.bonusRate * 100).toFixed(1)}%`}</b>
+              {` on top of every top-up${amount && Number(amount) > 0 ? `: ${Number(amount)} USDG gives ${usd(Number(amount) * (1 + d.bonusRate))} of Credits` : ""}${d.bonusCap ? `, up to ${usd(d.bonusCap)} of bonus a day` : ""}.`}
+            </>
+          ) : (
+            `Holders get more on every top-up: ${AI_ACCESS.tiers.map((t) => `${t.name} +${+(t.topUpBonus * 100).toFixed(1)}%`).join(", ")}.`
+          )}
+        </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {[5, 10, 25, 100].map((v) => (
             <button key={v} type="button" onClick={() => setAmount(String(v))} aria-pressed={amount === String(v)} className={cx("rounded-full border px-3 py-1 font-mono text-[12.5px]", amount === String(v) ? "border-[#ff9a5c] text-text" : "border-[#3a2418] text-[#a8907f]")}>
@@ -173,11 +190,11 @@ export function CreditsAccount() {
 # model: any id from /api/v1/models, or auto:price, auto:speed, auto:quality`}</pre>
       </div>
 
-      {((d.deposits?.length ?? 0) > 0 || (d.spends?.length ?? 0) > 0) && (
+      {((d.deposits?.length ?? 0) > 0 || (d.spends?.length ?? 0) > 0 || (d.bonuses?.length ?? 0) > 0) && (
         <div className="mt-6">
           <p className="font-mono text-[12px] uppercase tracking-[0.1em] text-[#a8907f]">History</p>
           <ul className="mt-2 divide-y divide-[#3a2418] font-mono text-[12.5px]">
-            {[...(d.deposits ?? []).map((x) => ({ at: x.at, what: "Top-up", amt: x.usd, plus: true })), ...(d.spends ?? []).map((x) => ({ at: x.at, what: `${x.kind === "gpu" ? "GPU" : "Model"}${x.ref ? ` · ${x.ref}` : ""}`, amt: x.usd, plus: false }))]
+            {[...(d.deposits ?? []).map((x) => ({ at: x.at, what: "Top-up", amt: x.usd, plus: true })), ...(d.bonuses ?? []).map((x) => ({ at: x.at, what: `Holder bonus · +${+(x.rate * 100).toFixed(1)}%`, amt: x.usd, plus: true })), ...(d.spends ?? []).map((x) => ({ at: x.at, what: `${x.kind === "gpu" ? "GPU" : "Model"}${x.ref ? ` · ${x.ref}` : ""}`, amt: x.usd, plus: false }))]
               .sort((a, b) => b.at - a.at)
               .slice(0, 40)
               .map((x, i) => (

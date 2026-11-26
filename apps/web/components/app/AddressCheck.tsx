@@ -22,12 +22,13 @@ type R = {
   tokens: { token: string; symbol: string; in: number; out: number; viaContracts: number; viaWallets: number; transfers: number }[];
   firstIn: { from: string; token: string; symbol: string; amount: number; block: string; tx: string } | null;
   counterparties: { address: string; kind: Kind; transfers: number }[];
-  holds?: { eth: number; tokens: { token: string; symbol: string; amount: number }[] };
+  holds?: { eth: number | null; tokens: { token: string; symbol: string; amount: number }[]; index?: number };
   error?: string;
+  at?: number;
 };
 const SCAN = "https://robinhoodchain.blockscout.com";
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-const num = (v: number) => (v >= 1e6 ? `${(v / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 })}M` : v >= 1e3 ? `${(v / 1e3).toLocaleString("en-US", { maximumFractionDigits: 1 })}K` : v.toLocaleString("en-US", { maximumFractionDigits: 2 }));
+const num = (v: number) => (v >= 1e6 ? `${(v / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 })}M` : v >= 1e3 ? `${(v / 1e3).toLocaleString("en-US", { maximumFractionDigits: 1 })}K` : v >= 1 ? v.toLocaleString("en-US", { maximumFractionDigits: 2 }) : v.toLocaleString("en-US", { maximumSignificantDigits: 4 }));
 // the real base tokens: anything else wearing their ticker is a copy
 const REAL: Record<string, string> = { USDG: "0x5fc5360d0400a0fd4f2af552add042d716f1d168", WETH: "0x0bd7d308f8e1639fab988df18a8011f41eacad73", CORBEL: "0xaa1f4de6b9f7cdf11fb8aa97ce163d35d731cdb1" };
 const KIND: Record<Kind, string> = { wallet: "Wallet", "smart-wallet": "Smart-account wallet", contract: "Contract" };
@@ -41,8 +42,7 @@ export function AddressCheck() {
   useEffect(() => {
     const a = new URLSearchParams(window.location.search).get("a");
     if (a && /^0x[0-9a-fA-F]{40}$/.test(a)) {
-      setQ(a);
-      void check(undefined, a);
+      void Promise.resolve().then(() => (setQ(a), check(undefined, a)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -54,8 +54,13 @@ export function AddressCheck() {
     setBusy(true);
     setR(null);
     try {
-      const x = await fetch(`/api/address?a=${a}`);
-      setR((await x.json()) as R);
+      let x = await fetch(`/api/address?a=${a}`, { cache: "no-store" });
+      // a busy wallet takes longer than one request: the answer keeps being read, so ask again
+      for (let i = 0; x.status === 202 && i < 15; i++) {
+        await new Promise((res) => setTimeout(res, 2_000));
+        x = await fetch(`/api/address?a=${a}`, { cache: "no-store" });
+      }
+      setR(x.status === 202 ? ({ error: "Still reading this address. Try again in a minute." } as R) : ((await x.json()) as R));
     } catch {
       setR({ error: "No answer. Try again." } as R);
     } finally {
@@ -63,6 +68,7 @@ export function AddressCheck() {
     }
   }
 
+  const copies = r?.holds ? r.holds.tokens.filter((t) => REAL[t.symbol.toUpperCase()] && REAL[t.symbol.toUpperCase()] !== t.token).length : 0;
   const verdict = !r || r.error ? null : r.relay
     ? { tone: "caution", text: "A relay: it sends transactions for smart wallets and moves almost no tokens of its own. A DEX can show it buying or selling coins it never held." }
     : r.kind === "contract"
@@ -72,7 +78,7 @@ export function AddressCheck() {
         : { tone: "plain", text: "A plain wallet." };
 
   return (
-    <Instrument code="C-08" title="Check any address" foot={<span>{r && !r.error ? `${r.window.partial ? "A very busy address: only its newest blocks are read," : `Token moves over the last ${r.window.days} days,`} blocks ${Number(r.window.from).toLocaleString("en-US")}–${Number(r.window.to).toLocaleString("en-US")}. ETH sent directly leaves no log and is not counted.` : "Read from the chain. A read takes up to a minute."}</span>}>
+    <Instrument code="C-08" title="Check any address" foot={<span>{r && !r.error ? `${r.window.partial ? "A very busy address: only its newest blocks are read," : `Token moves over the last ${r.window.days} days,`} blocks ${Number(r.window.from).toLocaleString("en-US")}–${Number(r.window.to).toLocaleString("en-US")}. ETH sent directly leaves no log and is not counted.${r.at ? ` Read ${new Date(r.at).toISOString().slice(11, 16)} UTC.` : ""}` : "Read from the chain. A read takes a minute or two."}</span>}>
       <form onSubmit={check} className="flex flex-wrap gap-2 px-4 py-4">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="0x… any wallet or contract" spellCheck={false} className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-[#0b0b0b] px-3 font-mono text-[13.5px] text-text outline-none focus:border-leaf" />
         <button type="submit" disabled={busy} className="h-11 rounded-xl bg-leaf px-5 text-[14px] font-semibold text-[#0b0b0b] disabled:opacity-60">{busy ? "Reading…" : "Check"}</button>
@@ -96,18 +102,17 @@ export function AddressCheck() {
           </div>
           {r.holds && (
             <div className="bg-bg px-4 py-4">
-              <p className="text-[12px] uppercase tracking-[0.08em] text-muted">{`Holds now · block ${Number(r.window.to).toLocaleString("en-US")}`}</p>
+              <p className="text-[12px] uppercase tracking-[0.08em] text-muted">Holds now</p>
               <ul className="mt-3 flex flex-wrap gap-2 text-[13.5px]">
-                <li className="rounded-xl border border-line px-3 py-1.5"><span className="font-mono tabular-nums text-text">{num(r.holds.eth)}</span><span className="ml-1.5 text-muted">ETH</span></li>
-                {r.holds.tokens.map((t) => (
+                <li className="rounded-xl border border-line px-3 py-1.5"><span className="font-mono tabular-nums text-text">{r.holds.eth === null ? "not read" : num(r.holds.eth)}</span><span className="ml-1.5 text-muted">ETH</span></li>
+                {r.holds.tokens.filter((t) => !REAL[t.symbol.toUpperCase()] || REAL[t.symbol.toUpperCase()] === t.token).slice(0, 40).map((t) => (
                   <li key={t.token} className="rounded-xl border border-line px-3 py-1.5">
                     <span className="font-mono tabular-nums text-text">{num(t.amount)}</span>
                     <a href={`/app/trust/check?q=${t.token}`} className="ml-1.5 text-muted underline-offset-4 hover:underline">{t.symbol}</a>
-                    {REAL[t.symbol.toUpperCase()] && REAL[t.symbol.toUpperCase()] !== t.token && <span className="ml-1.5 font-mono text-[10.5px] uppercase text-amber">copy</span>}
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-[12px] text-muted">Tokens it moved in the window and still has. Older holdings it never moved lately are not listed.</p>
+              <p className="mt-2 text-[12px] text-muted">{`${r.holds.index ? `${r.holds.index.toLocaleString("en-US")} indexed tokens asked for a balance, plus the tokens it moved in the window.` : "Partial: only the tokens it moved in the window were asked."}${copies ? ` ${copies} more only wear the ticker of USDG, WETH or CORBEL: bait, not listed.` : ""}`}</p>
             </div>
           )}
           {r.firstIn && (

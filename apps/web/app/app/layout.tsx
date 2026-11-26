@@ -1,3 +1,4 @@
+import "./tools.css";
 import { Logo } from "@/components/site/Header";
 import { NetStatus } from "@/components/site/NetStatus";
 import { AppNav } from "@/components/app/AppNav";

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     if (!sameOrigin(req)) return Response.json({ error: "Wrong origin." }, { status: 403 });
     const s = session(req);
     if (!s) return Response.json({ error: "Sign in with your wallet." }, { status: 401 });
-    if (!hasFull(tierOf(s.address))) return Response.json({ error: `Starting from your own file is for Full holders: ${FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
+    if (!hasFull(tierOf(s.address))) return Response.json({ error: `Starting from your own file is for ${FULL_TIER.name} holders and above: ${FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
     if (!mediaOn()) return Response.json({ error: "Pictures, video and sound are not open right now." }, { status: 503 });
     const form = await req.formData().catch(() => null);
     const file = form?.get("file");

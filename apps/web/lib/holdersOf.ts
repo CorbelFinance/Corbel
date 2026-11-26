@@ -38,3 +38,11 @@ export function holdersBrief(h: Awaited<ReturnType<typeof readHolders>> | null) 
   const people = h.top.filter((x) => !x.tags.includes("pool") && !x.tags.includes("burn") && !x.tags.includes("contract"));
   return { top10: h.summary.top10, insiders: h.summary.insiders, creator: h.summary.creator, holders: h.holders, largest: people[0]?.share ?? 0 };
 }
+
+/** A holders read already kept (no chain read), as the small summary lists show; null when none is fresh. */
+export function peekHolders(token: string) {
+  const hit = box.cache.get(token.toLowerCase());
+  if (!hit || Date.now() - hit.at > 2 * TTL || !hit.body.complete) return null;
+  const s = hit.body.summary;
+  return { top10: s.top10, creator: s.creator, snipers: s.snipers, sniperCount: s.sniperCount, insiders: s.insiders, holders: hit.body.holders };
+}

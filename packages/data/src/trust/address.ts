@@ -10,6 +10,10 @@
  * ETH itself is not read here: native transfers leave no log, and this node has no trace API.
  */
 import { formatUnits, type Address, type Hex, type PublicClient } from "viem";
+import { again, heldOf } from "../held.ts";
+import { LOG_WINDOW } from "./addresses.ts";
+import { isBaseCopy } from "../portfolio.ts";
+import { cleanText } from "../text.ts";
 
 const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ERC20 = [
@@ -18,7 +22,8 @@ const ERC20 = [
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
 ] as const;
 
-type Log = { address: string; topics: string[]; data: string; blockNumber: string; transactionHash: string };
+export type TransferLog = { address: string; topics: string[]; data: string; blockNumber: string; transactionHash: string };
+type Log = TransferLog;
 export type AddressKind = "wallet" | "smart-wallet" | "contract";
 export type AddressRead = {
   address: string;
@@ -32,17 +37,18 @@ export type AddressRead = {
   tokens: { token: string; symbol: string; in: number; out: number; viaContracts: number; viaWallets: number; transfers: number }[];
   firstIn: { from: string; token: string; symbol: string; amount: number; block: string; tx: string } | null;
   counterparties: { address: string; kind: AddressKind; transfers: number }[];
-  /** what it holds at the head block: ETH, and every token it moved in the window that it still has */
-  holds: { eth: number; tokens: { token: string; symbol: string; amount: number }[] };
+  /** what it holds now: ETH (null when it could not be read), and every indexed token plus every token it just moved.
+   *  index: how many indexed tokens were asked; 0 means only the moved ones were */
+  holds: { eth: number | null; tokens: { token: string; symbol: string; amount: number }[]; index: number };
 };
 
 /**
- * Logs over a range for one topic filter. Without a contract address the node answers at most 30,000 blocks per
+ * Logs over a range for one topic filter. Without a contract address the node answers a narrow window of blocks per
  * request, so the range is cut into such chunks and read three at a time per direction. A chunk refused for its size is halved; a
  * chunk refused for the rate (429) or lost on the way is asked again after a pause, never halved: halving a rate
  * refusal only multiplies the requests that get refused.
  */
-const CHUNK = 30_000n;
+const CHUNK = BigInt(LOG_WINDOW);
 const LANES = 3; // per direction: the in and out reads run side by side, six requests at most
 const TOO_BIG = /spans|range|exceeds limit|too many (results|logs)|limit exceeded|response size|query returned more/i;
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -93,16 +99,32 @@ async function kindOf(client: PublicClient, a: Address): Promise<{ kind: Address
   return { kind: "contract", delegate: null };
 }
 
-export async function readAddress(client: PublicClient, address: Address, blocksBack: bigint, days: number): Promise<AddressRead> {
+export type AddressIndex = {
+  tokens: string[];
+  meta(token: string): { symbol: string | null; decimals: number | null } | null;
+  /** a transfer index (a node's transfer-history method): one direction's token transfers over the range, newest
+   *  first, as logs, and the first block covered; null when it cannot answer, and the logs are read block by block */
+  transfers?(address: string, dir: "in" | "out", from: bigint, to: bigint): Promise<{ logs: TransferLog[]; from: bigint } | null>;
+};
+
+/** One direction from the transfer index when it answers, else from the logs, chunk by chunk. */
+async function side(client: PublicClient, a: string, dir: "in" | "out", topics: (string | null)[], from: bigint, to: bigint, index?: AddressIndex) {
+  const fast = index?.transfers ? await index.transfers(a, dir, from, to).catch(() => null) : null;
+  return fast ?? logs(client, topics, from, to);
+}
+
+export async function readAddress(client: PublicClient, address: Address, blocksBack: bigint, days: number, index?: AddressIndex): Promise<AddressRead> {
   const a = address.toLowerCase();
   const pad = `0x${a.slice(2).padStart(64, "0")}`;
   const head = await client.getBlockNumber();
   const from = head > blocksBack ? head - blocksBack : 0n;
-  const [k, txCount, outRead, inRead] = await Promise.all([
+  const [k, txCount, outRead, inRead, owned] = await Promise.all([
     kindOf(client, address),
     client.getTransactionCount({ address }).catch(() => 0),
-    logs(client, [TRANSFER, pad], from, head),
-    logs(client, [TRANSFER, null, pad], from, head),
+    side(client, a, "out", [TRANSFER, pad], from, head, index),
+    side(client, a, "in", [TRANSFER, null, pad], from, head, index),
+    // every indexed token is asked for its balance; a failed read leaves the moved tokens, and `holds.index` says 0
+    index?.tokens.length ? heldOf(client, address, index.tokens).catch(() => null) : null,
   ]);
   // a very busy address is read over a shorter window: both directions cut at the later of their first blocks
   const start = outRead.from > inRead.from ? outRead.from : inRead.from;
@@ -124,19 +146,31 @@ export async function readAddress(client: PublicClient, address: Address, blocks
   const meta = new Map<string, { symbol: string; dec: number }>();
   const tokenIds = [...new Set(all.map((x) => x.l.address.toLowerCase()))].slice(0, 30);
   const held: { token: string; symbol: string; amount: number }[] = [];
+  const add = (t: string, symbol: string, dec: number, v: bigint) => v > 0n && held.push({ token: t, symbol, amount: Number(formatUnits(v, dec)) });
   const [eth] = await Promise.all([
-    client.getBalance({ address, blockNumber: head }).catch(() => 0n),
+    again(() => client.getBalance({ address })).catch(() => null),
     ...tokenIds.map(async (t) => {
       const [symbol, dec, bal] = await Promise.all([
         client.readContract({ address: t as Address, abi: ERC20, functionName: "symbol" }).catch(() => "?"),
         client.readContract({ address: t as Address, abi: ERC20, functionName: "decimals" }).catch(() => 18),
-        client.readContract({ address: t as Address, abi: ERC20, functionName: "balanceOf", args: [address], blockNumber: head }).catch(() => 0n),
+        again(() => client.readContract({ address: t as Address, abi: ERC20, functionName: "balanceOf", args: [address] })).catch(() => null),
       ]);
-      meta.set(t, { symbol: String(symbol).slice(0, 16), dec: Number(dec) });
-      const amount = Number(formatUnits(bal as bigint, Number(dec)));
-      if (amount > 0) held.push({ token: t, symbol: String(symbol).slice(0, 16), amount });
+      const name = cleanText(String(symbol), 16) ?? "?";
+      meta.set(t, { symbol: name, dec: Number(dec) });
+      if (bal !== null) add(t, name, Number(dec), bal as bigint);
     }),
   ]);
+  // names come from the index; one it does not know is read from the token
+  await Promise.all(
+    [...(owned ?? [])].filter(([t]) => !meta.has(t)).map(async ([t, v]) => {
+      const m = index?.meta(t);
+      const [symbol, dec] = await Promise.all([
+        m?.symbol ?? client.readContract({ address: t as Address, abi: ERC20, functionName: "symbol" }).catch(() => "?"),
+        m?.decimals ?? client.readContract({ address: t as Address, abi: ERC20, functionName: "decimals" }).catch(() => 18),
+      ]);
+      add(t, cleanText(String(symbol), 16) ?? "?", Number(dec), v);
+    }),
+  );
   const tok = new Map<string, AddressRead["tokens"][number]>();
   for (const x of all) {
     const t = x.l.address.toLowerCase();
@@ -167,6 +201,6 @@ export async function readAddress(client: PublicClient, address: Address, blocks
     tokens: [...tok.values()].sort((p, q) => q.transfers - p.transfers).slice(0, 12),
     firstIn: first && fm ? { from: other(first), token: first.l.address.toLowerCase(), symbol: fm.symbol, amount: Number(formatUnits(BigInt(first.l.data.slice(0, 66)), fm.dec)), block: BigInt(first.l.blockNumber).toString(), tx: first.l.transactionHash as Hex } : null,
     counterparties: top.slice(0, 10).map(([c, n]) => ({ address: c, kind: kinds.get(c) ?? "wallet", transfers: n })),
-    holds: { eth: Number(formatUnits(eth as bigint, 18)), tokens: held.sort((p, q) => p.symbol.localeCompare(q.symbol)) },
+    holds: { eth: eth === null ? null : Number(formatUnits(eth, 18)), tokens: held.sort((p, q) => Number(isBaseCopy(p.symbol, p.token)) - Number(isBaseCopy(q.symbol, q.token)) || p.symbol.localeCompare(q.symbol)), index: owned ? index!.tokens.length : 0 },
   };
 }

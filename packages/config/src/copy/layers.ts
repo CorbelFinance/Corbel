@@ -10,6 +10,7 @@ export interface Tab {
   body: string[];
   /** Special widget the tab renders below the body. */
   widget?:
+    | "pay-per-call"
     | "terminal"
     | "exit-split"
     | "whale-radar"
@@ -29,6 +30,7 @@ export interface Tab {
     | "agent-versus"
     | "fair-launch"
     | "address-check"
+    | "sell-replay"
     | "steps"
     | "empty-balance"
     | "risk-matrix"
@@ -217,6 +219,7 @@ export const LAYERS: Layer[] = [
         widget: "creator-dossier",
       },
       { id: "address", label: "Address", body: ["Paste any address: a person, a contract or a relay, what it moved and who it moves with."], widget: "address-check" },
+      { id: "replay", label: "Failed sell", body: ["Paste a transaction that failed. It runs again on the chain and shows what stopped it.", "You see the contract that refused and, when its source is verified, the exact line."], widget: "sell-replay" },
       ...(HELD.fair ? [] : [{ id: "fair", label: "Fair launch", body: ["Paste a token: who made it, who was waived the launch fee, who holds it and who stayed."], widget: "fair-launch" } satisfies Tab]),
       {
         id: "api",
@@ -427,6 +430,7 @@ export const LAYERS: Layer[] = [
         widget: "strategy-league",
       },
       { id: "log", label: "Decision log", step: "What it decided", body: ["What the mandate contract decided in recent Break it runs, block by block."], widget: "decision-log" },
+      { id: "x402", label: "x402", step: "x402: pay per call", body: ["Any AI agent pays for a Corbel tool call in USDG: no account, no key. It asks, signs and gets the answer once the payment is in a block."], widget: "pay-per-call" },
       {
         id: "overview",
         label: "Overview",

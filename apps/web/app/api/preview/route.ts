@@ -1,4 +1,5 @@
 import { getClient, parseAddress, previewTx, redact } from "@corbel/data/chain";
+import { holderGate } from "@/lib/holderGate";
 import { guardWait } from "@/lib/guard";
 import { award } from "@/lib/points";
 import { HELD } from "@corbel/config";
@@ -22,6 +23,8 @@ const wei = (v: unknown): bigint | null => {
 
 export async function POST(req: Request) {
   if (HELD.preview) return new Response("Not found.", { status: 404 });
+  const gate = holderGate(req, "preview");
+  if (gate) return gate;
   const body = (await req.json().catch(() => null)) as { from?: string; to?: string; value?: string; data?: string } | null;
   const from = parseAddress(body?.from ?? "");
   const to = parseAddress(body?.to ?? "");

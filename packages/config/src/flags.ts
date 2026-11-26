@@ -20,7 +20,13 @@ export const FLAGS: Record<LayerId | "gapFund" | "openData", LayerStatus> = {
  * Tools that are built but held back from the public site: hidden from menus, tabs, the points
  * table and the alerts, their API answers 404 and their roadmap items read Building. Set one to false to ship it.
  */
-export const HELD = { fair: true, xray: true, preview: true, drain: true } as const;
+export const HELD = { fair: false, xray: false, preview: false, drain: false } as const;
+
+/**
+ * Tools only $CORBEL holders open, by the lowest tier that opens each (light, plus, full, core). A tool here that is
+ * also in HELD stays hidden; once released it answers holders only and tells everyone else which tier opens it.
+ */
+export const HOLDER_ONLY: { preview: "light" | "plus" | "full" | "core" | null; drain: "light" | "plus" | "full" | "core" | null } = { preview: null, drain: null };
 
 export const STATUS_LABEL: Record<LayerStatus, string> = {
   live: "Live",

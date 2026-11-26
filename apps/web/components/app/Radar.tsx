@@ -1,9 +1,10 @@
 "use client";
 
+import { RiskChips, useRisk } from "./RiskChips";
 import { WatchButton } from "./WatchButton";
 import Link from "next/link";
 import { TokenAvatar } from "./TokenAvatar";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cx } from "@corbel/ui";
 import { Instrument, Led, Seg, short } from "./kit";
 import { launchpadName, launchpadTone } from "@corbel/config";
@@ -11,7 +12,7 @@ import { launchpadName, launchpadTone } from "@corbel/config";
 type Row = {
   launchpad?: string | null;
   pool: string;
-  kind: "v2" | "v4";
+  kind: "v2" | "v3" | "v4";
   token: string;
   symbol: string | null;
   name: string | null;
@@ -116,6 +117,7 @@ export function Radar() {
   const needle = find.trim().toLowerCase();
   const all = [...(feed?.rows ?? []), ...older].filter((r) => !(hideDead && r.dead === 1));
   const rows = needle ? all.filter((r) => [r.symbol, r.name, r.token, r.launcher].some((v) => v?.toLowerCase().includes(needle))) : all;
+  const risk = useRisk(useMemo(() => rows.map((r) => r.token), [rows]));
   const day = feed?.last24h;
 
   return (
@@ -135,7 +137,7 @@ export function Radar() {
       }
       foot={
         <>
-          <span>Ages from block height · ×N = pools from the same wallet this week</span>
+          <span>{feed?.head ? `Corbel's index up to block ${feed.head.toLocaleString("en-US")} · ` : ""}Ages from block height · ×N = pools from the same wallet this week</span>
           <button type="button" onClick={more} disabled={busy || !feed} className="ibtn-ghost">
             {busy ? "Loading…" : "Older"}
           </button>
@@ -211,6 +213,7 @@ export function Radar() {
                     {r.name ? `${r.name} · ` : ""}
                     {short(r.token)}
                   </span>
+                  <RiskChips r={risk[r.token.toLowerCase()]} className="mt-1" />
                   </span>
                   </span>
                 </th>
@@ -223,7 +226,7 @@ export function Radar() {
                   ) : (
                     r.hooked && <span className="mb-1 block text-[13px] text-muted">Unlabelled hook</span>
                   )}
-                  {r.kind === "v4" ? "v4" : "V2"} · {r.base ?? "other"}
+                  {r.kind === "v4" ? "v4" : r.kind === "v3" ? "V3" : "V2"} · {r.base ?? "other"}
                 </td>
                 <td className="px-4 py-3">
                   {/* one sentence that decides, and its number: what a buyer needs before Check */}

@@ -1,5 +1,5 @@
 import { parseAddress } from "@corbel/data/chain";
-import { creatorDossier, padsOf } from "@corbel/indexer";
+import { creatorDossier, indexStatus, padsOf } from "@corbel/indexer";
 import { LAUNCHPADS } from "@corbel/config";
 import { guardWait } from "@/lib/guard";
 import { award } from "@/lib/points";
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     const count = (s: string) => tokens.filter((t) => t.state === s).length;
     award(req, "creator");
     return Response.json(
-      { address: address.toLowerCase(), bulk: d.bulk, total: tokens.length, trading: count("trading"), drained: count("drained"), curve: count("curve"), unknown: count("unknown"), tokens },
+      { address: address.toLowerCase(), head: indexStatus()?.high ?? null, at: Date.now(), bulk: d.bulk, total: tokens.length, trading: count("trading"), drained: count("drained"), curve: count("curve"), unknown: count("unknown"), tokens },
       { headers: { "cache-control": "public, max-age=60" } },
     );
   } finally {

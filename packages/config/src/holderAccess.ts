@@ -92,9 +92,15 @@ export type AiTier = {
   apiBoost: number;
   /** tokens followed with Telegram alerts; null = no limit */
   alerts: number | null;
+  /** wallets this tier's drain alarm watches; null = no limit */
+  drain: number | null;
+  /** bonus added to a Credits top-up, 0..1 */
+  topUpBonus: number;
   /** what else this tier opens, in one line */
   extra: string;
 };
+/** A signed-in wallet with no tier: the free level (chat and media counts come from the panel limits). */
+export const FREE_LEVEL = { drain: 1, topUpBonus: 0, markup: 0.1 } as const;
 /** What Credits add on top of the list price for a wallet with no tier. */
 export const CREDITS_MARKUP = 0.1;
 /** Models open to Full holders across text, pictures, video, voice and music: the one number every page uses. */
@@ -105,19 +111,24 @@ export const AI_ACCESS = {
   lightShare: 0.3,
   // thresholds for Plus and Core are a proposal (sprint plan, round 4) until the owner sets them
   tiers: [
-    { id: "light", name: "Light", minCoins: 1_000, text: 50, chars: 4000, image: 5, video: 2, voice: 5, music: 0, upscale: 0, cap: 10, models: "Selected fast models in standard quality: lighter pictures, short video and voice", quality: "Standard", markup: 0.1, gpuMinutes: 0, apiBoost: 1, alerts: 3, extra: "Holder card" },
-    { id: "plus", name: "Plus", minCoins: 100_000, text: 100, chars: 6000, image: 10, video: 2, voice: 10, music: 1, upscale: 1, cap: 20, models: "More models than Light in standard quality, music and upscale included", quality: "Standard", markup: 0.05, gpuMinutes: 10, apiBoost: 2, alerts: 20, extra: "Linked-wallet map" },
-    { id: "full", name: "Full", minCoins: 1_000_000, text: 150, chars: 8000, image: 20, video: 3, voice: 20, music: 2, upscale: 3, cap: 40, models: `All ${FULL_MODELS} models at full quality: every picture, video, voice, music and upscale model`, quality: "Full", markup: 0, gpuMinutes: 30, apiBoost: 5, alerts: 100, extra: "Your Telegram alert fires first" },
-    { id: "core", name: "Core", minCoins: 10_000_000, text: 150, chars: 8000, image: 20, video: 3, voice: 20, music: 2, upscale: 3, cap: 40, models: `All ${FULL_MODELS} models at full quality, first in the queue`, quality: "Full", markup: 0, gpuMinutes: 60, apiBoost: 10, alerts: null, extra: "First in the queue for models and GPUs" },
+    { id: "light", name: "Light", minCoins: 100_000, text: 100, chars: 6000, image: 15, video: 3, voice: 10, music: 0, upscale: 0, cap: 20, models: "More models than a signed-in wallet in standard quality: pictures, short video and voice", quality: "Standard", markup: 0.1, gpuMinutes: 0, apiBoost: 2, alerts: 10, drain: 3, topUpBonus: 0.05, extra: "Holder card" },
+    { id: "plus", name: "Plus", minCoins: 1_000_000, text: 150, chars: 8000, image: 30, video: 5, voice: 20, music: 2, upscale: 1, cap: 40, models: `All ${FULL_MODELS} models: every picture, video, voice and music model`, quality: "Full", markup: 0.075, gpuMinutes: 15, apiBoost: 3, alerts: 30, drain: 5, topUpBonus: 0.15, extra: "Free GPU time every day" },
+    { id: "full", name: "Full", minCoins: 2_500_000, text: 200, chars: 8000, image: 50, video: 8, voice: 30, music: 3, upscale: 3, cap: 60, models: `All ${FULL_MODELS} models at full quality, upscale included`, quality: "Full", markup: 0.035, gpuMinutes: 30, apiBoost: 5, alerts: 100, drain: 10, topUpBonus: 0.25, extra: "The model panel on every token check" },
+    { id: "core", name: "Core", minCoins: 10_000_000, text: 300, chars: 8000, image: 100, video: 15, voice: 50, music: 5, upscale: 5, cap: 100, models: `All ${FULL_MODELS} models at full quality, first in the queue`, quality: "Full", markup: 0, gpuMinutes: 60, apiBoost: 10, alerts: null, drain: null, topUpBonus: 0.3, extra: "First in the queue for models and GPUs" },
   ] as AiTier[],
 };
 
-/** The tier that opens every model; every tier above it keeps that. */
-export const FULL_TIER = AI_ACCESS.tiers.find((t) => t.id === "full")!;
-/** True for Full and every tier above it. */
+/** The tier that opens every model (Plus since 2026-11-26); every tier above it keeps that. */
+export const FULL_TIER = AI_ACCESS.tiers.find((t) => t.id === "plus")!;
+/** True for the tier that opens every model and every tier above it. */
 export const hasFull = (t: AiTier | null | undefined) => !!t && t.minCoins >= FULL_TIER.minCoins;
 /** What Credits add for this tier (the base markup without one). */
 export const markupFor = (t: AiTier | null | undefined) => t?.markup ?? CREDITS_MARKUP;
+
+/** Bonus on a Credits top-up for this tier (none without one). */
+export const topUpBonusFor = (t: AiTier | null | undefined) => t?.topUpBonus ?? FREE_LEVEL.topUpBonus;
+/** Wallets the drain alarm watches for this owner's tier; null = no limit. */
+export const drainFor = (t: AiTier | null | undefined) => (t ? t.drain : FREE_LEVEL.drain);
 
 /** The tier for a balance held through the whole window (the lowest balance of the last `holdDays` days). */
 export function aiTier(heldCoins: number): AiTier | null {

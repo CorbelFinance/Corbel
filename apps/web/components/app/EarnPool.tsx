@@ -108,7 +108,7 @@ export function EarnPool({ pair }: { pair: string }) {
         ))}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <section className="overflow-hidden rounded-2xl border border-line bg-[#0e0e0e]">
           <p className="border-b border-line px-5 py-3 text-[14px] font-semibold text-text">What an LP kept, day after day</p>
           <div className="px-5 pt-4">{d && <Curve v={d.curve} />}</div>

@@ -147,7 +147,7 @@ export function tokenBirth(token: string): { block: number; launchTx: string | n
     const pools = d.prepare(`SELECT id, kind, block FROM pools WHERE token0 = ? OR token1 = ?`).all(t, t) as { id: string; kind: string; block: number }[];
     const blocks = [launch?.block, ...pools.map((p) => p.block)].filter((b): b is number => typeof b === "number");
     if (!blocks.length) return null;
-    return { block: Math.min(...blocks), launchTx: launch?.tx ?? null, pairs: pools.filter((p) => p.kind === "v2").map((p) => p.id.toLowerCase()) };
+    return { block: blocks.reduce((m, b) => (b < m ? b : m), Infinity), launchTx: launch?.tx ?? null, pairs: pools.filter((p) => p.kind === "v2").map((p) => p.id.toLowerCase()) };
   } catch {
     return null;
   }
@@ -255,7 +255,7 @@ const BASES: Record<string, "ETH" | "WETH" | "USDG"> = {
 
 export interface RadarRow {
   pool: string;
-  kind: "v2" | "v4";
+  kind: "v2" | "v3" | "v4";
   token: string;
   symbol: string | null;
   name: string | null;
@@ -272,7 +272,7 @@ export interface RadarRow {
 
 /** Newest pools first. `base` is null when neither side is ETH, WETH or USDG. */
 export function recentPools(
-  opts: { limit?: number; kind?: "v2" | "v4"; before?: number } = {},
+  opts: { limit?: number; kind?: "v2" | "v3" | "v4"; before?: number } = {},
 ): RadarRow[] | null {
   const d = get();
   if (!d) return null;
@@ -288,7 +288,7 @@ export function recentPools(
     )
     .all(opts.kind ?? null, opts.kind ?? null, opts.before ?? null, opts.before ?? null, limit) as {
     id: string;
-    kind: "v2" | "v4";
+    kind: "v2" | "v3" | "v4";
     token0: string;
     token1: string;
     hooks: string | null;
@@ -334,7 +334,7 @@ const BASE_LC = new Map(Object.entries(BASES).map(([k, v]) => [k.toLowerCase(), 
 
 export interface LaunchRow {
   pool: string;
-  kind: "v2" | "v4";
+  kind: "v2" | "v3" | "v4";
   token: string;
   symbol: string | null;
   name: string | null;
@@ -360,7 +360,7 @@ export function launchesSince(fromBlock: number, limit = 6000): LaunchRow[] | nu
     )
     .all(fromBlock, Math.min(Math.max(limit, 1), 20000)) as {
     id: string;
-    kind: "v2" | "v4";
+    kind: "v2" | "v3" | "v4";
     token0: string;
     token1: string;
     hooks: string | null;
@@ -401,7 +401,7 @@ export function poolsSince(block: number) {
   const d = get();
   if (!d) return null;
   return d.prepare(`SELECT kind, COUNT(*) AS n FROM pools WHERE block >= ? GROUP BY kind`).all(block) as {
-    kind: "v2" | "v4";
+    kind: "v2" | "v3" | "v4";
     n: number;
   }[];
 }
@@ -440,6 +440,26 @@ export function v4PoolsBetween(a: string, b: string) {
 }
 
 /** Symbol, name and decimals of one indexed token. */
+/** Every token in the index with its first block (the wallet report reads balances and histories from it). */
+export function allTokens(): { address: string; firstBlock: number | null }[] {
+  const d = get();
+  if (!d) return [];
+  return (d.prepare("SELECT address, first_block FROM tokens").all() as { address: string; first_block: number | null }[]).map((r) => ({ address: r.address.toLowerCase(), firstBlock: r.first_block }));
+}
+
+/** token0/token1 of pools by id (v4 pool ids or pair addresses). */
+export function poolSides(ids: string[]): Map<string, { token0: string; token1: string }> {
+  const out = new Map<string, { token0: string; token1: string }>();
+  const d = get();
+  if (!d) return out;
+  const q = d.prepare("SELECT token0, token1 FROM pools WHERE id = ?");
+  for (const id of ids) {
+    const r = q.get(id.toLowerCase()) as { token0: string; token1: string } | undefined;
+    if (r) out.set(id.toLowerCase(), { token0: r.token0.toLowerCase(), token1: r.token1.toLowerCase() });
+  }
+  return out;
+}
+
 export function tokenMeta(address: string) {
   const d = get();
   if (!d) return null;
@@ -463,12 +483,13 @@ export function launchStats(bph = 31_320) {
     .prepare(
       `SELECT CAST((? - block) / ? AS INTEGER) AS h, kind, COUNT(*) AS n FROM pools WHERE block > ? GROUP BY h, kind`,
     )
-    .all(head, BPH, head - 48 * BPH) as { h: number; kind: "v2" | "v4"; n: number }[];
+    .all(head, BPH, head - 48 * BPH) as { h: number; kind: "v2" | "v3" | "v4"; n: number }[];
   const hours = Array.from({ length: 48 }, (_, i) => ({ ago: i, v2: 0, v4: 0 }));
-  for (const r of hourly) if (r.h >= 0 && r.h < 48) hours[r.h]![r.kind] = r.n;
+  // V3 pools count with the V2 pairs: the chart shows v4 and the rest
+  for (const r of hourly) if (r.h >= 0 && r.h < 48) hours[r.h]![r.kind === "v3" ? "v2" : r.kind] += r.n;
 
   const rows = d.prepare(`SELECT kind, token0, token1, hooks, launcher, dead, block FROM pools`).all() as {
-    kind: "v2" | "v4";
+    kind: "v2" | "v3" | "v4";
     token0: string;
     token1: string;
     hooks: string | null;
@@ -490,7 +511,7 @@ export function launchStats(bph = 31_320) {
     drained = 0;
   for (const r of rows) {
     const hooked = !!r.hooks && r.hooks !== NATIVE;
-    const v = `${r.kind === "v2" ? "V2" : "v4"} · ${base(r)}${hooked ? " · hook" : ""}`;
+    const v = `${r.kind === "v2" ? "V2" : r.kind === "v3" ? "V3" : "v4"} · ${base(r)}${hooked ? " · hook" : ""}`;
     venue.set(v, (venue.get(v) ?? 0) + 1);
     if (hooked) hooks.set(r.hooks!, (hooks.get(r.hooks!) ?? 0) + 1);
     if (r.kind === "v2" && r.dead !== null) {
@@ -601,6 +622,17 @@ export function tokenDrained(token: string): boolean | null {
   const r = d.prepare(`SELECT MAX(dead) AS dead, COUNT(dead) AS known FROM pools WHERE token0 = ? OR token1 = ?`).get(token.toLowerCase(), token.toLowerCase()) as { dead: number | null; known: number };
   if (!r.known) return null;
   return r.dead === 1;
+}
+
+/** The first block the index holds a pool from: pools older than the index show up at about this block. Kept an hour. */
+let startCache: { at: number; block: number | null } | null = null;
+export function indexStart(): number | null {
+  if (startCache && Date.now() - startCache.at < 3_600_000) return startCache.block;
+  const d = get();
+  if (!d) return null;
+  const r = d.prepare("SELECT MIN(block) AS b FROM pools").get() as { b: number | null } | undefined;
+  startCache = { at: Date.now(), block: r?.b ?? null };
+  return startCache.block;
 }
 
 /** A token's pools in the index: V2 pair addresses, its first pool's block and that pool's launcher. */

@@ -20,7 +20,7 @@ async function handle(req: Request) {
   const status = indexStatus();
   if (!status) return Response.json({ error: "The index is not available yet." }, { status: 503 });
   const rows = recentPools({
-    kind: kind === "v2" || kind === "v4" ? kind : undefined,
+    kind: kind === "v2" || kind === "v3" || kind === "v4" ? kind : undefined,
     before: Number.isFinite(before) && before > 0 ? before : undefined,
     limit: Number.isFinite(limit) ? limit : 50,
   });

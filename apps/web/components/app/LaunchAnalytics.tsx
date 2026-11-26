@@ -39,7 +39,7 @@ function Hourly({ hours }: { hours: Stats["hours"] }) {
       <div className="mb-3 flex min-h-5 items-baseline justify-between gap-4 font-medium text-[13px] uppercase tracking-[0.08em] text-muted">
         <span>Pools created per hour</span>
         <span aria-live="polite" className="text-text">
-          {h ? `${h.ago === 0 ? "This hour" : `${h.ago}h ago`} · ${h.v2 + h.v4} pools (${h.v4} v4 · ${h.v2} V2)` : `Peak ${max} / hour`}
+          {h ? `${h.ago === 0 ? "This hour" : `${h.ago}h ago`} · ${h.v2 + h.v4} pools (${h.v4} v4 · ${h.v2} V2/V3)` : `Peak ${max} / hour`}
         </span>
       </div>
       <div className="relative h-44" onMouseLeave={() => setHover(null)}>
@@ -80,7 +80,7 @@ function Hourly({ hours }: { hours: Stats["hours"] }) {
           <tr>
             <th scope="col">Hours ago</th>
             <th scope="col">v4</th>
-            <th scope="col">V2</th>
+            <th scope="col">V2 and V3</th>
           </tr>
         </thead>
         <tbody>

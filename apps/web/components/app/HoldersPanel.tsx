@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { cx } from "@corbel/ui";
 import { short } from "./kit";
 
-type Tag = "pool" | "burn" | "creator" | "minted" | "sniper" | "bundle" | "fresh" | "whale" | "dolphin" | "fish";
+type Tag = "pool" | "burn" | "contract" | "creator" | "minted" | "sniper" | "bundle" | "fresh" | "whale" | "dolphin" | "fish";
 type Holder = { address: string; share: number; tags: Tag[]; bought: number; sold: number; txs: number | null };
 export type HoldersData = {
   supply: number;
@@ -50,6 +50,7 @@ const DOLPHIN = 0.001;
 const TAG: Record<Tag, { label: string; cls: string; tip: string }> = {
   pool: { label: "Pool", cls: "border-[#383838] text-muted", tip: "A liquidity pool, not a person" },
   burn: { label: "Burned", cls: "border-[#383838] text-muted", tip: "Sent to a dead address" },
+  contract: { label: "Contract", cls: "border-[#383838] text-muted", tip: "A contract, not a person: a vault, a router, a lock or a launch contract" },
   creator: { label: "Creator", cls: "border-flesh/60 text-flesh", tip: "The wallet that created the first pool" },
   minted: { label: "First mint", cls: "border-flesh/40 text-flesh", tip: "Received the tokens when they were minted" },
   sniper: { label: "Sniper", cls: "border-[var(--lav)]/60 text-[var(--lav)]", tip: "Bought within about 30 seconds of the pool opening" },
@@ -130,7 +131,7 @@ export function HoldersPanel({ token, symbol }: { token: string; symbol: string 
                     {short(h.address)}
                   </a>
                   <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
-                    {h.tags.map((t) => (
+                    {h.tags.filter((t) => t in TAG).map((t) => (
                       <span key={t} title={TAG[t].tip} className={cx("rounded-full border px-1.5 text-[12px]", TAG[t].cls)}>
                         {TAG[t].label}
                       </span>

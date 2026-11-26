@@ -163,7 +163,7 @@ function ModelPick({ list, value, onChange, canTop }: { list: ChatModel[]; value
               </li>
             )}
             {!shown.length && <li className="px-3 py-6 text-center text-[12.5px] text-muted">No model by that name.</li>}
-            <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for Full holders ({FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL): text, pictures, video, voice and music in one chat.</li>
+            <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for {FULL_TIER.name} holders and above ({FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL): text, pictures, video, voice and music in one chat.</li>
           </ul>
         </div>
       )}
@@ -563,7 +563,7 @@ export function Chat() {
             { href: "/app/ai/studio", label: "Studio", line: "Pick a task" },
             { href: "/app/ai/models", label: "Models", line: "Compare providers" },
             { href: "/app/ai/gpus", label: "GPUs", line: "Rent by the second" },
-            { href: "/app/ai/credits", label: "Credits", line: "Soon" },
+            { href: "/app/ai/credits", label: "Credits", line: "Lock, burn or top up" },
           ].map((x) => (
             <Link key={x.href} href={x.href} className="group flex items-center justify-between rounded-xl px-2 py-1.5 hover:bg-[#ff9a5c]/10">
               <span>
@@ -631,7 +631,7 @@ export function Chat() {
                         </li>
                       );
                     })}
-                  <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for Full holders ({FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL): Veo, Sora, Kling, Runway, Flux and more, in full quality.</li>
+                  <li className="border-t border-[#2e1f17] px-3 py-2.5 text-[12px] text-muted"><span className="text-[#ff9a5c]">{FULL_MODELS} models</span> for {FULL_TIER.name} holders and above ({FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL): Veo, Sora, Kling, Runway, Flux and more, in full quality.</li>
                 </ul>
               )}
             </div>

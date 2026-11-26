@@ -1,7 +1,9 @@
 import { session, sameOrigin } from "@/lib/auth";
 import { guardWait } from "@/lib/guard";
-import { balance, createModelKey, CREDITS, creditsOpen, history, listModelKeys, revokeModelKey, setKeyCap, startCreditsSweep, treasury } from "@/lib/credits";
+import { BONUS_DAY_CAP, balance, createModelKey, CREDITS, creditsOpen, history, listModelKeys, revokeModelKey, setKeyCap, startCreditsSweep, treasury } from "@/lib/credits";
 import { markupOf } from "@/lib/markup";
+import { topUpBonusFor } from "@corbel/config";
+import { tierOf } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,7 +21,8 @@ export async function GET(req: Request) {
   try {
     startCreditsSweep();
     const s = session(req);
-    const base = { open: creditsOpen(), treasury: creditsOpen() ? treasury() : null, markup: markupOf(s?.address), minTopUp: CREDITS.minTopUp, maxCap: CREDITS.maxCap, signedIn: !!s };
+    const t = s ? tierOf(s.address) : null;
+    const base = { open: creditsOpen(), treasury: creditsOpen() ? treasury() : null, markup: markupOf(s?.address), minTopUp: CREDITS.minTopUp, maxCap: CREDITS.maxCap, signedIn: !!s, tier: t?.name ?? null, bonusRate: topUpBonusFor(t), bonusCap: BONUS_DAY_CAP };
     if (!s) return Response.json(base, { headers: noStore });
     return Response.json({ ...base, ...balance(s.address), ...history(s.address), keys: listModelKeys(s.address) }, { headers: noStore });
   } finally {

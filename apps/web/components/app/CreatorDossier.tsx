@@ -10,7 +10,7 @@ import { cx } from "@corbel/ui";
 import { Instrument, Led, Verdict, short } from "./kit";
 
 type T = { token: string; symbol: string | null; name: string | null; pad: string | null; block: number; pools: number; state: "trading" | "drained" | "curve" | "unknown" };
-type D = { address: string; bulk: boolean; total: number; trading: number; drained: number; curve: number; unknown: number; tokens: T[]; error?: string };
+type D = { address: string; head?: number | null; at?: number; bulk: boolean; total: number; trading: number; drained: number; curve: number; unknown: number; tokens: T[]; error?: string };
 const SCAN = "https://robinhoodchain.blockscout.com";
 const STATE = { trading: ["Trading", "text-leaf"], drained: ["Drained", "text-flesh"], curve: ["On its curve", "text-amber"], unknown: ["Not read yet", "text-muted"] } as const;
 
@@ -45,7 +45,7 @@ export function CreatorDossier() {
   const rate = d && known ? Math.round((d.drained / known) * 100) : null;
   return (
     <div className="space-y-4">
-      <Instrument code="C-31" title="Creator dossier" busy={busy} status={<Led tone={d ? "on" : "off"} label={d ? `${d.total} tokens found` : "Paste a wallet"} />} foot={<span>From Corbel&apos;s index of every pool and launchpad launch on Robinhood Chain. A pool counts as drained when its liquidity was pulled or left as dust.</span>}>
+      <Instrument code="C-31" title="Creator dossier" busy={busy} status={<Led tone={d ? "on" : "off"} label={d ? `${d.total} tokens found` : "Paste a wallet"} />} foot={<span>From Corbel&apos;s index of every pool and launchpad launch on Robinhood Chain{d?.head ? `, up to block ${d.head.toLocaleString("en-US")}` : ""}{d?.at ? `, read ${new Date(d.at).toISOString().slice(11, 16)} UTC` : ""}. A pool counts as drained when its liquidity was pulled or left as dust.</span>}>
         <form
           className="flex flex-col gap-px bg-line sm:flex-row"
           onSubmit={(e) => {

@@ -26,7 +26,7 @@ export function TokenLive() {
   const cells: [string, string, string][] = [
     ["Total supply", d ? fmt(d.supply) : "…", "Fixed. The contract has no mint function."],
     ["Locked by the team", d ? fmt(d.locked) : "…", d ? `${pct(d.locked, d.supply)} of supply, in the HoodLock locker` : "Reading the locker"],
-    ["Burned", d ? fmt(d.burned) : "…", d && d.burned === 0 ? "None yet. Burns start when Credits open." : "Sent to the dead and zero addresses"],
+    ["Burned", d ? fmt(d.burned) : "…", d && d.burned === 0 ? "None yet." : "Destroyed, or sent to the dead and zero addresses"],
   ];
   return (
     <div>

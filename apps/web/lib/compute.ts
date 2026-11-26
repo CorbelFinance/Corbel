@@ -55,8 +55,9 @@ async function loadModels() {
         ctx: m.context_length ?? 0,
         pin: per1M(m.pricing?.prompt),
         pout: per1M(m.pricing?.completion),
-        // "image" on a model that only reads images is the price of an input image, not of a drawing
-        pimg: img && img > 0 && out.includes("image") ? img : null,
+        // "image" on a model that only reads images is the price of an input image, not of a drawing; and on a drawing
+        // model a figure under a tenth of a cent is a price per image token, not per picture: not shown as one
+        pimg: img && img >= 0.001 && out.includes("image") ? img : null,
         in: inp,
         out,
         created: m.created ?? 0,

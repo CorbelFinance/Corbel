@@ -3,7 +3,7 @@
  * the configured endpoints, several lanes each.
  *
  *   RPC_URLS          comma-separated endpoints (falls back to RPC_URL). Optional per endpoint, after "#":
- *                     logs=N (eth_getLogs window), batch=N (largest JSON-RPC batch), e.g. https://x.org#logs=10000&batch=3
+ *                     logs=N (eth_getLogs window), wide=N (the same for one contract), batch=N (largest JSON-RPC batch), e.g. https://x.org#logs=10000&batch=3
  *   RPC_LANES         lanes per endpoint (default 4)
  *   RPC_CONCURRENCY   in-flight requests per lane (default 4)
  *   RPC_SPACING_MS    minimum gap between requests on one lane (default 60)
@@ -11,7 +11,8 @@
  * A 429 pauses only that lane (Retry-After, else exponential) and the request moves to another lane.
  * Network errors and 5xx count against a lane; five in a row rest it for 30 s. A JSON-RPC error that is a limit of
  * the node itself (window, plan, pruning) sends the request to another endpoint.
- * eth_getLogs wider than an endpoint's window never goes to that endpoint.
+ * eth_getLogs wider than an endpoint's window never goes to that endpoint; when it is wider than every window, only the
+ * endpoints with the widest one are asked. A query for one contract has its own, much wider window on some nodes.
  * Each configured endpoint is checked once for chain id 4663 before use; a mismatch disables it.
  *
  * Priority: a request made while serving a visitor (rpcPriority 2) goes ahead of normal work (1), and background
@@ -28,12 +29,14 @@ const CHAIN_ID_HEX = "0x1237"; // 4663
 const MAX_ATTEMPTS = 7;
 const KNOWN_LOG_WINDOW: Record<string, number> = { "robinhood.drpc.org": 10_000 };
 const DEFAULT_LOG_WINDOW = 25_000;
+/** Window of a query for a single contract, where the node gives it more room (measured 2026-11-24). */
+const KNOWN_WIDE_WINDOW: Record<string, number> = { "rpc.mainnet.chain.robinhood.com": 10_000_000 };
 /** Largest JSON-RPC batch a node takes (drpc's free plan refuses more than 3). */
 const KNOWN_MAX_BATCH: Record<string, number> = { "robinhood.drpc.org": 3 };
 
-type Endpoint = { url: string; host: string; logWindow: number; maxBatch: number; fromEnv: boolean; verified: Promise<boolean> | null; ok: boolean };
+type Endpoint = { url: string; host: string; logWindow: number; wideWindow: number; maxBatch: number; fromEnv: boolean; verified: Promise<boolean> | null; ok: boolean };
 type Lane = { id: string; ep: Endpoint; inflight: number; last: number; pausedUntil: number; strikes: number; fails: number };
-type Job = { prio: number; url: string; init: RequestInit | undefined; range: number; tried: Set<string>; attempts: number; last: Response | null; err: unknown; resolve: (r: Response) => void; reject: (e: unknown) => void };
+type Job = { prio: number; url: string; init: RequestInit | undefined; range: number; wide: boolean; tried: Set<string>; attempts: number; last: Response | null; err: unknown; resolve: (r: Response) => void; reject: (e: unknown) => void };
 
 const num = (v: string | undefined, d: number) => (v && Number.isFinite(Number(v)) ? Number(v) : d);
 const concurrency = () => num(process.env.RPC_CONCURRENCY, 4);
@@ -53,9 +56,11 @@ function endpoints(fallbackUrl: string): Endpoint[] {
     const [url, frag] = entry.split("#");
     const host = new URL(url!).host;
     const m = /logs=(\d+)/.exec(frag ?? "");
+    const wd = /wide=(\d+)/.exec(frag ?? "");
+    const logWindow = m ? Number(m[1]) : (KNOWN_LOG_WINDOW[host] ?? DEFAULT_LOG_WINDOW);
     const b = /batch=(\d+)/.exec(frag ?? "");
     const maxBatch = b ? Math.max(1, Number(b[1])) : (KNOWN_MAX_BATCH[host] ?? 0);
-    return { url: url!, host, logWindow: m ? Number(m[1]) : (KNOWN_LOG_WINDOW[host] ?? DEFAULT_LOG_WINDOW), maxBatch, fromEnv, verified: null, ok: true };
+    return { url: url!, host, logWindow, wideWindow: Math.max(logWindow, wd ? Number(wd[1]) : (KNOWN_WIDE_WINDOW[host] ?? 0)), maxBatch, fromEnv, verified: null, ok: true };
   });
 }
 
@@ -85,7 +90,20 @@ function logRange(body: unknown): number {
   return max;
 }
 
-const BAD_RPC_ERROR = /ranges? over|block range|too many blocks|not supported|limit exceeded|header not found|unknown block|missing trie|batch of more than/i;
+/** True when every log query in the body names exactly one contract: such a query may be much wider. */
+function oneContract(body: unknown): boolean {
+  let any = false;
+  for (const r of Array.isArray(body) ? body : [body]) {
+    const req = r as { method?: string; params?: { address?: string | string[] }[] };
+    if (req?.method !== "eth_getLogs") continue;
+    const a = req.params?.[0]?.address;
+    if (typeof a !== "string" && !(Array.isArray(a) && a.length === 1)) return false;
+    any = true;
+  }
+  return any;
+}
+
+const BAD_RPC_ERROR = /ranges? over|block range|too many blocks|not supported|limit exceeded|header not found|unknown block|missing trie|historical state|does not exist\/is not available|batch of more than/i;
 
 /**
  * Sends to a lane's endpoint, cutting a JSON-RPC batch into pieces the node accepts (ep.maxBatch) and joining the
@@ -130,19 +148,33 @@ function verify(lane: Lane): Promise<boolean> {
   return ep.verified;
 }
 
+const gone = (job: Job) => job.init?.signal?.aborted === true;
+/** More than this many waiting means the chain is not answering: new work is refused instead of piling up in memory. */
+const MAX_QUEUE = 4_000;
+
 function pump(st: ReturnType<typeof state>) {
   if (st.timer) return;
   const now = Date.now();
   let wait = Infinity;
   for (let qi = 0; qi < st.queue.length; ) {
     const job = st.queue[qi]!;
+    // the caller gave up while this waited: drop it. Sent anyway it would fail at once, and that failure says nothing
+    // about the lane (2026-11-24: such failures rested every lane for 30 s, so the next ones expired in the queue too)
+    if (gone(job)) {
+      st.queue.splice(qi, 1);
+      job.reject(job.init!.signal!.reason ?? new Error("rpc: the caller stopped waiting"));
+      continue;
+    }
     if (job.prio === 0 && bgInflight >= bgMax()) {
       wait = Math.min(wait, 25);
       qi++;
       continue;
     }
-    const fits = st.lanes.filter((l) => l.ep.ok && (job.range === 0 || job.range <= l.ep.logWindow));
-    const pool = fits.length ? fits : st.lanes.filter((l) => l.ep.ok);
+    const room = (l: Lane) => (job.wide ? l.ep.wideWindow : l.ep.logWindow);
+    const up = st.lanes.filter((l) => l.ep.ok);
+    const fits = up.filter((l) => job.range === 0 || job.range <= room(l));
+    const most = fits.length ? 0 : Math.max(0, ...up.map(room));
+    const pool = fits.length ? fits : up.filter((l) => room(l) === most);
     if (!pool.length) {
       // nothing can carry it (every endpoint disabled): finish now instead of waiting forever
       st.queue.splice(qi, 1);
@@ -217,6 +249,11 @@ async function dispatch(st: ReturnType<typeof state>, job: Job, lane: Lane) {
     lane.strikes = Math.max(0, lane.strikes - 1);
     job.resolve(new Response(text, { status: res.status, headers: res.headers }));
   } catch (e) {
+    // the caller's own timeout or cancel is not a fault of the lane, and there is nobody left to answer
+    if (gone(job)) {
+      job.reject(e);
+      return;
+    }
     lane.fails++;
     job.tried.add(lane.id);
     job.err = e;
@@ -242,14 +279,18 @@ export const limitedFetch: typeof fetch = (input, init) => {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const st = state(url);
   let range = 0;
+  let wide = false;
   try {
-    range = typeof init?.body === "string" ? logRange(JSON.parse(init.body)) : 0;
+    const parsed = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : null;
+    range = logRange(parsed);
+    wide = range > 0 && oneContract(parsed);
   } catch {
     range = 0;
   }
   const prio = rpcPriority.getStore() ?? 1;
+  if (st.queue.length >= MAX_QUEUE) return Promise.reject(new Error("rpc: too much work is waiting"));
   return new Promise<Response>((resolve, reject) => {
-    enqueue(st, { prio, url, init, range, tried: new Set(), attempts: 0, last: null, err: null, resolve, reject }, false);
+    enqueue(st, { prio, url, init, range, wide, tried: new Set(), attempts: 0, last: null, err: null, resolve, reject }, false);
     pump(st);
   });
 };

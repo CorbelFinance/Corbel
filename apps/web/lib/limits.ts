@@ -5,9 +5,9 @@ import { store } from "./store";
  * Read on every request (one indexed row), so a change applies at once, without a restart.
  */
 export const LIMIT_KEYS = {
-  chatPerWallet: { env: "CHAT_PER_WALLET", def: 30, min: 0, max: 1000, label: "Chat messages per wallet a day" },
-  imagePerWallet: { env: "MEDIA_IMAGES", def: 10, min: 0, max: 500, label: "Pictures per wallet a day" },
-  videoPerWallet: { env: "MEDIA_VIDEOS", def: 2, min: 0, max: 100, label: "Videos per wallet a day" },
+  chatPerWallet: { env: "CHAT_PER_WALLET", def: 25, min: 0, max: 1000, label: "Chat messages per wallet a day" },
+  imagePerWallet: { env: "MEDIA_IMAGES", def: 3, min: 0, max: 500, label: "Pictures per wallet a day" },
+  videoPerWallet: { env: "MEDIA_VIDEOS", def: 1, min: 0, max: 100, label: "Videos per wallet a day" },
   audioPerWallet: { env: "MEDIA_AUDIO", def: 5, min: 0, max: 500, label: "Sound clips per wallet a day" },
   mediaTokensDay: { env: "MEDIA_TOKENS_DAY", def: 60, min: 0, max: 5000, label: "Generation budget a day, all wallets (upstream tokens)" },
 } as const;

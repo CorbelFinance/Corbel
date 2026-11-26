@@ -21,3 +21,5 @@ export * from "./preview.ts";
 export { CURVE_INIT } from "./trust/waivers.ts";
 export * from "./trust/address.ts";
 export * from "./trust/lpHolders.ts";
+export * from "./walletReport.ts";
+export * from "./held.ts";

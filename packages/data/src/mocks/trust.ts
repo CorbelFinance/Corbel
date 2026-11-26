@@ -6,6 +6,7 @@ export const EXAMPLE_TRUST_REPORT = TrustReport.parse({
   example: true,
   checks: [
     { id: "honeypot", name: "Honeypot", result: "pass", reason: "Simulated sell returned USDG." },
+    { id: "exit", name: "Exit now", result: "pass", reason: "Selling a $1,000 position in the simulation moved the price 2.1%.", metric: "−2.1%" },
     { id: "tax", name: "Buy / sell tax", result: "fail", reason: "Sell tax is higher than buy tax." },
     { id: "owner", name: "Owner rights", result: "fail", reason: "Owner can still change fees." },
     { id: "liquidity", name: "Liquidity lock", result: "pass", reason: "Pool tokens are held by a lock contract." },

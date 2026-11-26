@@ -3,13 +3,17 @@ import { keccak256 } from "viem";
 import { stockCandidates, v4PoolsBetween } from "@corbel/indexer";
 import { guardWait } from "@/lib/guard";
 import { store } from "@/lib/store";
+import { gapHistory, gapNote, recordWeekend, settle, storeRebuilt, waitingForOpen, weeksOf } from "@/lib/gapHistory";
+import { rebuildToken, type Bar } from "@/lib/gapBackfill";
+import { asBackground } from "@corbel/data/chain";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
  * GET /api/gap → the weekend gap for issuer stock tokens: the pool's mid price on Robinhood Chain against
- * the stock's last regular-session close. Closes come from public chart data (delayed). One shared snapshot, refreshed every 10 minutes.
+ * the stock's last regular-session close. Closes come from public chart data (delayed). One shared snapshot, refreshed every 10 minutes. Each refresh over a weekend also records the
+ * chain price for the gap history (lib/gapHistory); GET /api/gap?history=1 returns that history.
  */
 const TTL = 600_000;
 const TOKENS = 80;
@@ -50,6 +54,52 @@ async function lastClose(symbol: string) {
   return closes.get(symbol) ?? null;
 }
 
+/** Daily bars (day, open, close) for about half a year, oldest first. */
+async function readBars(symbol: string): Promise<Bar[]> {
+  const r = await fetch(`${process.env.CLOSES_API_URL ?? ""}/v8/finance/chart/${encodeURIComponent(symbol)}?range=6mo&interval=1d`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" }, signal: AbortSignal.timeout(20_000) }).catch(() => null);
+  if (!r?.ok) return [];
+  const j = (await r.json().catch(() => null)) as { chart?: { result?: { timestamp: number[]; indicators: { quote: { open: (number | null)[]; close: (number | null)[] }[] } }[] } } | null;
+  const res = j?.chart?.result?.[0];
+  if (!res) return [];
+  const q = res.indicators.quote[0];
+  return res.timestamp.map((t, i) => ({ day: new Date(t * 1000).toISOString().slice(0, 10), open: q?.open[i] ?? null, close: q?.close[i] ?? null }));
+}
+
+/** Settles past weekends with the open of the first trading day after Friday (a Monday holiday moves it), a few per refresh. */
+async function settleWeekends() {
+  for (const w of waitingForOpen(Date.now()).slice(0, 8)) {
+    const bars = await readBars(w.symbol).catch(() => []);
+    const next = bars.filter((b) => b.day > w.week && b.open && b.open > 0).sort((a, b) => a.day.localeCompare(b.day))[0];
+    if (next?.open) settle(w.week, w.symbol, next.open);
+  }
+}
+
+/**
+ * Once per symbol: rebuild its past weekends from the chain (lib/gapBackfill), in the background and one symbol at a
+ * time so visitors' reads go first. A symbol is marked done only when its rebuild finished.
+ */
+const B = globalThis as unknown as { __corbelGapRebuild?: boolean };
+async function rebuildPast(client: NonNullable<ReturnType<typeof getClient>>, stocks: { address: string; symbol: string; decimals: number | null }[]) {
+  if (B.__corbelGapRebuild) return;
+  B.__corbelGapRebuild = true;
+  try {
+    const head = await client.getBlockNumber();
+    // up to this week's Friday: the live sweep owns the current weekend
+    const before = Date.now() - 3 * 86_400_000;
+    for (const s of stocks) {
+      if (gapNote.get(`done:${s.symbol}`)) continue;
+      const bars = await readBars(s.symbol).catch(() => []);
+      if (!bars.length) continue;
+      const rows = await asBackground(() => rebuildToken(client, s, bars, weeksOf(s.symbol), before, head)).catch((e: unknown) => (console.error("[gap rebuild]", s.symbol, redact(e)), null));
+      if (rows === null) continue;
+      storeRebuilt(rows);
+      gapNote.set(`done:${s.symbol}`, String(Date.now()));
+    }
+  } finally {
+    B.__corbelGapRebuild = false;
+  }
+}
+
 /** Last completed regular-session close for a US ticker, from the public chart endpoint. */
 async function readClose(symbol: string): Promise<{ close: number; at: number; last: number } | null> {
   const r = await fetch(`${process.env.CLOSES_API_URL ?? ""}/v8/finance/chart/${encodeURIComponent(symbol)}?range=5d&interval=1d`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" }, signal: AbortSignal.timeout(20_000) });
@@ -84,6 +134,8 @@ function refresh() {
         }),
       )
     ).filter((s): s is NonNullable<typeof s> => !!s);
+    // past weekends, rebuilt once per symbol in the background (never blocks this refresh)
+    void rebuildPast(client, issued.map((s) => ({ address: s.address, symbol: s.symbol, decimals: s.decimals ?? null })));
     const rows: GapRow[] = [];
     for (let i = 0; i < issued.length; i += 4) {
       const got = await Promise.all(
@@ -112,6 +164,13 @@ function refresh() {
     }
     rows.sort((a, b) => (b.liquidity ?? -1) - (a.liquidity ?? -1));
     state.snap = { at: Date.now(), rows, source: "public chart data (delayed)", ms: Date.now() - t0 };
+    try {
+      // only pools that can carry a trade: a thin pool's price is a signal, not a gap (the same rule as the desk)
+      recordWeekend(Date.now(), rows.filter((r) => (r.liquidity !== null ? r.liquidity >= 1000 : r.gap !== null && Math.abs(r.gap) <= 0.25)));
+      await settleWeekends();
+    } catch (e) {
+      console.error("[api/gap] history", redact(e));
+    }
     state.err = null;
   })()
     .catch((e) => {
@@ -143,6 +202,7 @@ export async function GET(req: Request) {
   const g = await guardWait(req, "stocks");
   if ("blocked" in g) return g.blocked;
   try {
+    if (new URL(req.url).searchParams.get("history") === "1") return Response.json(gapHistory(), { headers: { "cache-control": "public, max-age=300" } });
     return await handle();
   } finally {
     g.release();

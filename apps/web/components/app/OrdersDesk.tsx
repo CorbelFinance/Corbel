@@ -61,6 +61,11 @@ export function OrdersDesk() {
   const [now, setNow] = useState(0);
   const [kind, setKind] = useState<Kind>("limit");
   const [token, setToken] = useState("");
+  // opened from the terminal's Limit tab: the token comes with the link
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("token");
+    if (t && /^0x[0-9a-fA-F]{40}$/.test(t)) void Promise.resolve().then(() => setToken((v) => v || t));
+  }, []);
   const [price, setPrice] = useState("");
   const [amount, setAmount] = useState("");
   const [parts, setParts] = useState("5");

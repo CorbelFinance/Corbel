@@ -100,7 +100,7 @@ export async function POST(req: Request) {
     const full = model.startsWith("x:");
     const tier = s ? tierOf(s.address) : null;
     if (guest && full) return Response.json({ error: "Sign in with your wallet to use this model." }, { status: 401 });
-    if (full && !hasFull(tier)) return Response.json({ error: `This model is for Full holders: ${FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
+    if (full && !hasFull(tier)) return Response.json({ error: `This model is for ${FULL_TIER.name} holders and above: ${FULL_TIER.minCoins.toLocaleString("en-US")} $CORBEL held for ${AI_ACCESS.holdDays} days.` }, { status: 403 });
     if (full && !textModel(model)) return Response.json({ error: "This model is not open right now. Pick another one." }, { status: 400 });
     if (!full && (!base || !key)) return Response.json({ error: "Chat is not open right now." }, { status: 503 });
     const route = full ? model : model && isAvailable(model) ? providerModel(model) : null;

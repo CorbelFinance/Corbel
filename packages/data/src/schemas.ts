@@ -11,6 +11,8 @@ export const TrustCheck = z.object({
   metric: z.string().optional(),
   /** the measured numbers behind the result, for the score (shares as 0..1) */
   value: z.record(z.string(), z.number()).optional(),
+  /** where this result was read and when: the chain at a block, or Corbel's own index; partial when a part is missing */
+  source: z.object({ from: z.string(), block: z.string().nullable(), at: z.number(), partial: z.boolean() }).optional(),
 });
 
 export const TrustReport = z.object({

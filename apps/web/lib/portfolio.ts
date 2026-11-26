@@ -1,5 +1,7 @@
 import { getClient, readPortfolio, redact } from "@corbel/data/chain";
-import { indexStatus, launcherHistory, tokenMeta, v4PoolsBetween } from "@corbel/indexer";
+import { allTokens, indexStatus, launcherHistory, tokenMeta } from "@corbel/indexer";
+import { ensureV4, v4PoolsBetween, v4PoolsFor } from "./v4extra";
+import { receivedOf } from "./transferIndex";
 
 /**
  * One address's balances and the tokens it received inside the index window, valued at spot in ETH.
@@ -37,10 +39,11 @@ async function scan(address: `0x${string}`, key: string): Promise<{ body: unknow
   // scan the index window when there is one, else the last ~3 days
   const from = st?.low ? BigInt(st.low) : head - 1_000_000n;
   try {
-    const r = await readPortfolio(client, address, { from, to: head }, { v4PoolsBetween, tokenMeta });
+    const r = await readPortfolio(client, address, { from, to: head }, { v4PoolsBetween, tokenMeta, allTokens, v4For: (t) => v4PoolsFor(t) ?? [], findPools: (t) => ensureV4(client, t), received: receivedOf });
     const body = { ...r, launches: launcherHistory(address) };
     if (box.cache.size > 200) box.cache.delete(box.cache.keys().next().value!);
-    box.cache.set(key, { at: Date.now(), body });
+    // a read that missed the index is shown once and asked again next time, never kept
+    if (r.scanned.index || !allTokens().length) box.cache.set(key, { at: Date.now(), body });
     return { body };
   } catch (e) {
     console.error("[portfolio]", redact(e));

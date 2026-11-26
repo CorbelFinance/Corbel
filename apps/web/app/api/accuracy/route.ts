@@ -1,5 +1,6 @@
 import { poolStudy, signalStudy } from "@corbel/indexer";
 import { verdictStats } from "@/lib/stats";
+import { award } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,12 +12,13 @@ let cache: { at: number; body: unknown } | null = null;
  * each signal computed only from what was on chain before the pool or launch it judges, plus how many check results are
  * on record for the score-based study. Cached 10 minutes. The same numbers the /accuracy page draws.
  */
-export async function GET() {
-  if (cache && Date.now() - cache.at < 600_000) return Response.json(cache.body);
+export async function GET(req: Request) {
+  if (cache && Date.now() - cache.at < 600_000) return (award(req, "record"), Response.json(cache.body));
   const pools = poolStudy();
   const launches = signalStudy();
   if (!pools) return Response.json({ error: "The index is not reachable right now." }, { status: 503 });
   const body = { at: new Date().toISOString(), pools, launches, verdicts: verdictStats() };
   cache = { at: Date.now(), body };
+  award(req, "record");
   return Response.json(body, { headers: { "cache-control": "public, max-age=600" } });
 }

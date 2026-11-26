@@ -11,7 +11,7 @@ type Holding = { token: string; symbol: string | null; name: string | null; deci
 type P = {
   address: string;
   block: string;
-  scanned: { from: string; to: string; windows: number; complete: boolean };
+  scanned: { from: string; to: string; windows: number; complete: boolean; index?: number; unread?: number };
   eth: string;
   weth: string;
   usdg: string;
@@ -219,7 +219,7 @@ export function Portfolio() {
           p && (
             <>
               <span>
-                Scanned {days.toFixed(1)} days · blocks {Number(p.scanned.from).toLocaleString("en")}–{Number(p.scanned.to).toLocaleString("en")} · {(p.ms / 1000).toFixed(1)} s
+                {p.scanned.index ? `${p.scanned.index.toLocaleString("en")} indexed tokens asked · ` : "Partial: the index read failed, only recent tokens are listed · "}{p.scanned.unread ? `${p.scanned.unread} balances not read · ` : ""}Scanned {days.toFixed(1)} days · blocks {Number(p.scanned.from).toLocaleString("en")}–{Number(p.scanned.to).toLocaleString("en")} · {(p.ms / 1000).toFixed(1)} s
               </span>
               <span>Spot is not a sell price. Use exit.</span>
             </>
@@ -227,7 +227,7 @@ export function Portfolio() {
         }
       >
         {busy && !p && <Idle>Reading Transfer logs for this address across the indexed week…</Idle>}
-        {p && p.holdings.length === 0 && <Idle>No other tokens received in the scanned window.</Idle>}
+        {p && p.holdings.length === 0 && <Idle>{p.scanned.index ? "No indexed token is held, and none arrived in the scanned window." : "Not all of this wallet could be read. Refresh in a minute."}</Idle>}
         {p && p.holdings.length > 0 && (
           <div className="relative overflow-x-auto">
             <table className="w-full min-w-[880px] border-collapse text-left text-sm">
