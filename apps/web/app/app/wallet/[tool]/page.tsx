@@ -9,6 +9,7 @@ import { StressTest } from "@/components/app/StressTest";
 import { WalletReport } from "@/components/app/WalletReport";
 import { WalletXray } from "@/components/app/WalletXray";
 import { TxPreview } from "@/components/app/TxPreview";
+import { LinkedMap } from "@/components/app/LinkedMap";
 import { HELD } from "@corbel/config";
 
 /** Wallet tools: one address read the ways other people read it, before you act on it. */
@@ -21,6 +22,7 @@ const ALL_TOOLS = [
   { id: "stress", label: "Stress test", line: "After a fall" },
   { id: "paper", label: "Paper account", line: "Real fills, no money" },
   { id: "share", label: "Share link", line: "Expiring, no address shown" },
+  { id: "linked", label: "Linked wallets", line: "Who an address deals with" },
 ] as const;
 // tools held back from the public site (config HELD) are neither listed nor served
 const TOOLS = ALL_TOOLS.filter((t) => !(t.id === "xray" && HELD.xray) && !(t.id === "preview" && HELD.preview));
@@ -57,7 +59,7 @@ export default async function WalletTool({ params }: { params: Promise<{ tool: s
         </nav>
       </div>
       <h1 className="sr-only">{t.label}</h1>
-      <div className="mt-4">{(({ approvals: <Approvals />, xray: <WalletXray />, preview: <TxPreview />, report: <WalletReport />, exposure: <Exposure />, stress: <StressTest />, paper: <PaperBook />, share: <ShareLink /> }) as Record<Id, React.ReactNode>)[t.id]}</div>
+      <div className="mt-4">{(({ approvals: <Approvals />, xray: <WalletXray />, preview: <TxPreview />, report: <WalletReport />, exposure: <Exposure />, stress: <StressTest />, paper: <PaperBook />, share: <ShareLink />, linked: <LinkedMap /> }) as Record<Id, React.ReactNode>)[t.id]}</div>
       <WhatCanGoWrong items={RISKS} />
     </>
   );

@@ -35,6 +35,8 @@ async function api(method: string, body: Record<string, unknown>, timeoutMs = 30
   return (await r.json()) as { ok: boolean; result?: unknown };
 }
 const send = (chat: number, text: string) => api("sendMessage", { chat_id: chat, text, disable_web_page_preview: true }).catch((e) => (console.error("[telegram]", redact(e)), { ok: false }));
+/** Sends one plain message to a chat (used by the Radar alerts). */
+export const sendTo = (chat: number, text: string) => send(chat, text);
 
 /** A one-time code that links this wallet's chat, and the link that carries it. */
 export function linkCode(owner: string): { code: string; url: string | null } {

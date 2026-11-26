@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import type { Metadata, Viewport } from "next";
 import { Tracker } from "@/components/site/Tracker";
 import localFont from "next/font/local";
@@ -33,12 +34,15 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#060807", colorScheme: "dark" };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // the per-request nonce from proxy.ts: our two inline scripts run only with it
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="en" className={`${geist.variable} ${inter.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
         {/* Marks JS as available so reveal states may hide content; without JS everything stays visible. */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html:
               // the intro plays on arrival and on reload; a click from one page of the site to another skips it
@@ -46,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "document.documentElement.classList.add('js');try{var n=performance.getEntriesByType('navigation')[0],l=+sessionStorage.getItem('corbel.left')||0;if(n&&n.type!=='reload'&&Date.now()-l<8000)document.documentElement.classList.add('intro-seen');addEventListener('pagehide',function(){sessionStorage.setItem('corbel.left',String(Date.now()))})}catch(e){}",
           }}
         />
-        <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
       </head>
       <body>
         <a

@@ -4,7 +4,7 @@ Use Corbel when an agent is about to buy, sell, hold or approve a token on Robin
 Corbel reads the chain and simulates. It never asks for a key, never signs and never holds funds: the user signs
 every transaction in their own wallet.
 
-Base URL: https://corbel.finance · Version 2 · MCP server: `packages/mcp` in https://github.com/CorbelFinance/Corbel
+Base URL: https://corbel.finance · Version 2 · Overview for agents: /llms.txt · OpenAPI: /openapi.json · MCP server: `packages/mcp` in https://github.com/CorbelFinance/Corbel
 
 ## 1. Before any buy: may the agent make this trade?
 

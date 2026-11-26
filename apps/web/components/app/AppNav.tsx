@@ -26,6 +26,7 @@ const GROUPS: Group[] = [
       { href: "/app/trade/many", title: "Sell many", text: "Clear small holdings into ETH, one by one" },
       { href: "/app/trade/whales", title: "Big swaps", text: "Largest swaps and the wallets behind them" },
       { href: "/app/trade/orders", title: "Orders", text: "Limit, stop, DCA and TWAP" },
+      { href: "/app/trade/noeth", title: "Swap without ETH", text: "Gas paid in the token you sell" },
       { href: "/app/trade/filler", title: "Filler desk", text: "How keepers fill orders", tag: "spec" },
     ],
   },
@@ -50,6 +51,8 @@ const GROUPS: Group[] = [
     match: ["/app/stocks"],
     items: [
       { href: "/app/stocks/market", title: "Stock market", text: "Map, breadth, venues and pools" },
+      { href: "/app/stocks/reserves", title: "Issuer reserves", text: "What backs the stock tokens, by the filing" },
+      { href: "/app/stocks/baskets", title: "Baskets", text: "Several stock tokens in one swap" },
       { href: "/app/stocks/loan", title: "Loan calculator", text: "What a loan against a stock token can take" },
       { href: "/app/stocks/desk", title: "Stock tokens", text: "Issuer code or a lookalike", tag: "soon" },
     ],
@@ -126,6 +129,7 @@ const GROUPS: Group[] = [
       { href: "/app/wallet/stress", title: "Stress test", text: "Your holdings after a fall" },
       { href: "/app/wallet/paper", title: "Paper account", text: "Trade pretend USDG at real fills" },
       { href: "/app/wallet/share", title: "Share link", text: "Expiring, no address shown" },
+      { href: "/app/wallet/linked", title: "Linked wallets", text: "Who an address deals with, from Plus" },
     ],
   },
   {

@@ -230,10 +230,10 @@ export const TOKEN = {
     {
       name: "What we won't do",
       kicker: "Commitment · updated 22 Nov 2026",
-      line: "Never a reason to hold, never a word on price. Demand has to come from use. Burns only take coins spent on Corbel. Buybacks only use revenue already earned, by a rule published first.",
+      line: "Never a reason to hold, never a word on price. Demand has to come from use. Burns follow the Fee Burn contract: a fixed share of every trading fee, on chain.",
       rows: [
-        ["Burn", "Only coins spent on Corbel"],
-        ["Buyback", "Earned revenue, published rule"],
+        ["Burn", "A fixed share of every fee, by contract"],
+        ["Rewards", "Weekly, to people who use Corbel"],
         ["Price talk", "Never"],
       ],
     },

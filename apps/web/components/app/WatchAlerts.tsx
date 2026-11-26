@@ -106,6 +106,41 @@ function WebhookRow() {
   );
 }
 
+type Rd = { on: boolean; eligible: boolean; delayMin: number | null; telegram: boolean; recent: { at: number; text: string }[]; error?: string };
+
+/** New pools as a digest every 10 minutes, higher tiers first (lib/radarAlerts). */
+function RadarRow() {
+  const [r, setR] = useState<Rd | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = () => fetch("/api/account/radar", { cache: "no-store" }).then((x) => x.json() as Promise<Rd>).then(setR).catch(() => undefined);
+  useEffect(() => void load(), []);
+  if (!r || r.error) return null;
+  const toggle = async () => {
+    setMsg(null);
+    const x = await fetch("/api/account/radar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ on: !r.on }) });
+    const j = (await x.json().catch(() => ({}))) as Rd & { error?: string };
+    if (!x.ok) return setMsg(j.error ?? "No answer.");
+    setR(j);
+  };
+  const when = r.delayMin ? `${r.delayMin} minutes after it is made` : "the moment it is made";
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line px-4 py-3 text-[13px]">
+      <span className="text-text">New pools</span>
+      {!r.eligible ? (
+        <span className="text-muted">A digest of new pools every 10 minutes opens from the Light tier; higher tiers get it first.</span>
+      ) : (
+        <>
+          <span className={r.on ? "text-leaf" : "text-muted"}>{r.on ? `On · a digest every 10 minutes, ${when}${r.telegram ? ", in your Telegram" : ". Link Telegram to get it in a chat"}` : `A digest of new pools every 10 minutes, ${when} at your tier.`}</span>
+          <button type="button" onClick={() => void toggle()} className="ml-auto h-8 rounded-lg border border-line px-3 font-mono text-[12px] text-text hover:border-leaf">
+            {r.on ? "Turn off" : "Turn on"}
+          </button>
+        </>
+      )}
+      {msg && <span className="w-full text-[12.5px] text-muted">{msg}</span>}
+    </div>
+  );
+}
+
 export function WatchAlerts() {
   const [f, setF] = useState<Feed | null>(null);
   useEffect(() => {
@@ -150,6 +185,7 @@ export function WatchAlerts() {
         </ul>
       )}
       <TelegramRow />
+      <RadarRow />
       <WebhookRow />
     </section>
   );

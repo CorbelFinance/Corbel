@@ -5,7 +5,7 @@
  * hook is set, and x-corbel-event = the event id. A hook that fails 20 times in a row is switched off.
  */
 import { createHmac, randomBytes } from "node:crypto";
-import { publicUrl } from "./safeFetch";
+import { publicUrl, resolvesPublic } from "./safeFetch";
 import { store } from "./store";
 import { tierOf } from "./tiers";
 import { onWatchEvent, type WatchEvent } from "./watchEngine";
@@ -29,7 +29,13 @@ export const removeHook = (owner: string) => void db()?.prepare("DELETE FROM hoo
 
 async function post(owner: string, e: WatchEvent) {
   const h = db()?.prepare("SELECT url, secret, fails FROM hooks WHERE owner = ?").get(owner) as { url: string; secret: string; fails: number } | undefined;
-  if (!h || h.fails >= MAX_FAILS || !publicUrl(h.url)) return;
+  const u = h ? publicUrl(h.url) : null;
+  if (!h || h.fails >= MAX_FAILS || !u) return;
+  // the name is resolved now, at send time: a URL that later points inside never gets the POST
+  if (!(await resolvesPublic(u))) {
+    db()?.prepare("UPDATE hooks SET fails = ?, last = ?, status = ? WHERE owner = ?").run(h.fails + 1, Date.now(), 0, owner);
+    return;
+  }
   const body = JSON.stringify({ id: e.id, kind: e.kind, token: e.token, symbol: e.symbol, text: e.text, at: new Date(e.at).toISOString() });
   let status = 0;
   try {

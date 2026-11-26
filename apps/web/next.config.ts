@@ -1,30 +1,11 @@
 import type { NextConfig } from "next";
 
-const isDev = process.env.NODE_ENV === "development";
-
 /**
- * Security headers for every response. CSP without nonces (pages stay static, per Next's CSP guide):
- * scripts only from this origin, and connect-src 'self' means a page can only ever talk to our own /api,
- * so even injected code could not send data anywhere else. No frames, no plugins, no foreign forms.
+ * Security headers for every response. The page Content Security Policy, with a per-request nonce, is set in
+ * proxy.ts; API answers get a policy that allows nothing to run.
  */
-const csp = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self'",
-  `connect-src 'self'${isDev ? " ws: wss:" : ""}`,
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "frame-src 'none'",
-  "worker-src 'self' blob:",
-  "manifest-src 'self'",
-].join("; ");
 
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "no-referrer" },
@@ -32,8 +13,7 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
   // effective over TLS only; browsers ignore it on plain http
-  // short while the domain is new: raise to max-age=31536000; includeSubDomains after a few stable days
-  { key: "Strict-Transport-Security", value: "max-age=300" },
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
 ];
 
 const config: NextConfig = {
@@ -57,6 +37,8 @@ const config: NextConfig = {
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
+      // pages get their policy with a fresh nonce from proxy.ts; data answers never run scripts at all
+      { source: "/api/(.*)", headers: [{ key: "Content-Security-Policy", value: "default-src 'none'; frame-ancestors 'none'" }] },
       // API answers are data, never pages: no caching by intermediaries unless a route says so
       { source: "/api/(.*)", headers: [{ key: "X-Robots-Tag", value: "noindex" }] },
       // the check badge is made to be shown on other sites: only this one route may be loaded cross-origin

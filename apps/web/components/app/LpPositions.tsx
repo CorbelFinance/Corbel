@@ -34,7 +34,7 @@ export function LpPositions() {
     }
   };
   return (
-    <Instrument code="E-03" title="Your LP positions" busy={busy} status={<Led tone={res && !res.error ? "on" : "off"} label={res && !res.error ? `${res.positions.length} in ${res.pools} pools` : "Any address"} />} foot={<span>LP tokens held in the pools listed on Pools, valued at the pool now. Fees are your share of the last day.</span>}>
+    <Instrument code="E-03" title="Your LP positions" busy={busy} status={<Led tone={res && !res.error ? "on" : "off"} label={res && !res.error ? `${res.positions.length} in ${res.pools} pools` : "Any address"} />} foot={<span>LP tokens held in the pools listed on Pools, valued at the pool now. Fees are your share of the last day. In these V2 pools every fee is added to the pool as it is paid, so your share grows by itself: there is nothing to collect and nothing to put back.</span>}>
       <form
         onSubmit={(e) => {
           e.preventDefault();

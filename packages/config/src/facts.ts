@@ -47,6 +47,21 @@ export const FACTS = {
   morphoLltv: u("Morpho LLTV, stock tokens vs USDG", "62.5%"),
   usdgShare: u("USDG share of chain stablecoins", "~65%"),
   uniswapShare: u("Uniswap share of DEX volume", "77–86%"),
+  // the issuer's own quarterly filing: what backs the public stock tokens
+  stockTokenBacking: {
+    label: "Securities the issuer holds to back public stock tokens",
+    value: "$185M",
+    source: "Robinhood Markets, Inc. Form 10-Q for the quarter ended 30 Sep 2026: public stock token obligations of $185 million at fair value, and the securities held to back them at the same fair value",
+    asOf: "2026-09-30",
+    status: "verified",
+  },
+  stockTokenIssuer: {
+    label: "Issuer of Stock Tokens",
+    value: "Robinhood Assets (Jersey) Limited",
+    source: "Robinhood Markets, Inc. Form 10-Q for the quarter ended 30 Sep 2026: tokenized debt securities; the company is required to buy the underlying securities and hold them as collateral",
+    asOf: "2026-09-30",
+    status: "verified",
+  },
   mintBurnWindow: u("Stock token mint/burn window", "Mon 02:00 – Sat 02:00 CET/CEST", null),
   // Our targets
   launchFee: t("Launch trading fee", "1%"),
@@ -62,6 +77,9 @@ export const FACTS = {
 } satisfies Record<string, Fact>;
 
 export type FactKey = keyof typeof FACTS;
+
+/** The filing behind the two stock token facts above. */
+export const STOCK_TOKEN_FILING = "https://www.sec.gov/Archives/edgar/data/1783879/000178387926000167/hood-20260930.htm";
 
 export const isShown = (f: Fact) => f.status === "verified" || f.status === "target";
 

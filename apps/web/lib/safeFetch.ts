@@ -5,6 +5,7 @@
  * this server's own services.
  */
 import { isIP } from "node:net";
+import { lookup } from "node:dns/promises";
 
 const PRIVATE_V4: [number, number][] = [
   [0x00000000, 8], // 0.0.0.0/8
@@ -53,6 +54,21 @@ export function publicUrl(u: string | URL): URL | null {
   return x;
 }
 
+/**
+ * True when every address the URL's host resolves to is public. A name that points at a private or loopback address
+ * (127.0.0.1 behind a public-looking domain) is refused, and so is a name that does not resolve.
+ */
+export async function resolvesPublic(u: URL): Promise<boolean> {
+  const h = u.hostname.replace(/^\[|\]$/g, "");
+  if (isIP(h)) return !privateAddress(h);
+  try {
+    const all = await lookup(h, { all: true, verbatim: true });
+    return all.length > 0 && all.every((a) => !privateAddress(a.address));
+  } catch {
+    return false;
+  }
+}
+
 export type SafeResponse = { status: number; url: string; type: string; body: Buffer; cut: boolean };
 
 /** GET a URL someone else chose. Null when it is not public, a hop is refused, or the network fails. */
@@ -61,6 +77,7 @@ export async function safeFetch(u: string | URL, o: { headers?: Record<string, s
   const deadline = AbortSignal.timeout(o.timeoutMs ?? 10_000);
   let url = publicUrl(u);
   for (let hop = 0; url && hop <= (o.maxRedirects ?? 3); hop++) {
+    if (!(await resolvesPublic(url))) return null;
     let r: Response;
     try {
       r = await fetch(url, { headers: o.headers, redirect: "manual", signal: deadline });

@@ -15,6 +15,7 @@ export function GET() {
       tools: Object.entries(PRICES).map(([id, usdg]) => ({ id, usdg, ...TOOLS[id] })),
       how: "Call a tool without payment to get a 402 with what to sign (USDG ReceiveWithAuthorization). Sign it, send it base64 in X-PAYMENT, and the answer comes once the payment is in a block.",
       paid: paidCalls(),
+      docs: { llms: "/llms.txt", openapi: "/openapi.json", skill: "/skill.md" },
     },
     { headers: { "cache-control": "public, max-age=30" } },
   );

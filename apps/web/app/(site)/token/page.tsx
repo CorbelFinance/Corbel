@@ -31,7 +31,6 @@ const NEVER = [
   ["No payouts", "No revenue, stock tokens or coins are sent to holders."],
   ["No price talk", "We never say where the price goes, and never ask anyone to buy."],
   ["No burn pitch", "Burns follow rules written in contracts and in this page. We never say a burn moves the price."],
-  ["No buyback pitch", "A buyback only uses revenue already earned, by a rule published before it runs."],
 ] as const;
 
 function Head({ id, n, title, line }: { id: string; n: string; title: string; line?: string }) {

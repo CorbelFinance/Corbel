@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { createPublicClient, http, type Hex, type PublicClient } from "viem";
 
-export type Devchain = { rpc: string; chainId: number; dev: Hex; fund: Hex; orders: Hex; predict: Hex; launchpad?: Hex; fromBlock?: string; at: string };
+export type Devchain = { rpc: string; chainId: number; dev: Hex; fund: Hex; orders: Hex; predict: Hex; launchpad?: Hex; gasless?: Hex; basket?: Hex; fromBlock?: string; at: string };
 
 export function devchain(): Devchain | null {
   const f = process.env.DEVCHAIN;

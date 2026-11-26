@@ -33,7 +33,7 @@ export function readShare(t: string): { address: `0x${string}`; exp: number } | 
   const raw = Buffer.from(t, "base64url");
   if (raw.length !== 12 + 26 + 16) return null;
   try {
-    const d = createDecipheriv("aes-256-gcm", key, raw.subarray(0, 12));
+    const d = createDecipheriv("aes-256-gcm", key, raw.subarray(0, 12), { authTagLength: 16 });
     d.setAAD(AAD);
     d.setAuthTag(raw.subarray(38));
     const plain = Buffer.concat([d.update(raw.subarray(12, 38)), d.final()]);

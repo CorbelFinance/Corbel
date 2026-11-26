@@ -11,6 +11,9 @@ export async function register() {
   // the Telegram bot answers in the group and posts the feed from boot, not from the first account visit
   const { startTelegram } = await import("./lib/telegram");
   startTelegram();
+  // new pools as a digest for holders who asked, higher tiers first (lib/radarAlerts)
+  const { startRadarAlerts } = await import("./lib/radarAlerts");
+  startRadarAlerts();
   warmOnBoot();
   warmExamples();
 }

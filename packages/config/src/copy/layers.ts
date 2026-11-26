@@ -11,6 +11,9 @@ export interface Tab {
   /** Special widget the tab renders below the body. */
   widget?:
     | "pay-per-call"
+    | "gasless"
+    | "basket"
+    | "issuer-reserves"
     | "terminal"
     | "exit-split"
     | "whale-radar"
@@ -271,6 +274,18 @@ export const LAYERS: Layer[] = [
         widget: "stock-desk",
       },
       {
+        id: "reserves",
+        label: "Reserves",
+        body: ["The issuer's stock tokens on this chain, valued now. Next to them, what its own filing says backs them."],
+        widget: "issuer-reserves",
+      },
+      {
+        id: "baskets",
+        label: "Baskets",
+        body: ["Buy several stock tokens in one transaction, weighted the way you choose, each with its own floor."],
+        widget: "basket",
+      },
+      {
         id: "loan",
         label: "Loan",
         body: ["Type your numbers: what you hold, what you borrow, the lender's liquidation limit. Nothing is pre-filled and nothing is signed."],
@@ -355,6 +370,12 @@ export const LAYERS: Layer[] = [
         label: "Orders",
         body: ["Three order types, one contract. Your input waits in escrow until the pool pays your floor."],
         widget: "order-types",
+      },
+      {
+        id: "noeth",
+        label: "No ETH",
+        body: ["Swap with no ETH at all. You sign two messages; a relayer pays the gas for a small fee."],
+        widget: "gasless",
       },
       {
         id: "filler",

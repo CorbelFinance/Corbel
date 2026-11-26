@@ -1,4 +1,9 @@
 import { PayPerCall } from "./PayPerCall";
+import { GaslessDesk } from "./GaslessDesk";
+import { GaslessWallet } from "./GaslessWallet";
+import { OrdersWallet } from "./OrdersWallet";
+import { BasketDesk } from "./BasketDesk";
+import { IssuerReserves } from "./IssuerReserves";
 import { TokenShelf } from "./TokenShelf";
 import { CopycatBoard } from "./CopycatBoard";
 import { AddressCheck } from "./AddressCheck";
@@ -91,6 +96,7 @@ export function TabWidget({ kind, layer }: { kind: NonNullable<Tab["widget"]>; l
     case "order-types":
       return (
         <div className="space-y-6">
+          <OrdersWallet />
           <OrdersEscrow />
           <OrdersDesk />
           <OrderPlanner />
@@ -234,6 +240,17 @@ export function TabWidget({ kind, layer }: { kind: NonNullable<Tab["widget"]>; l
       return <SellReplay />;
     case "agent-versus":
       return <AgentVersus />;
+    case "gasless":
+      return (
+        <div className="space-y-3">
+          <GaslessWallet />
+          <GaslessDesk />
+        </div>
+      );
+    case "issuer-reserves":
+      return <IssuerReserves />;
+    case "basket":
+      return <BasketDesk />;
     case "pay-per-call":
       return <PayPerCall />;
     case "decision-log":

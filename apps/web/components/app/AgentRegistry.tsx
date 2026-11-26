@@ -4,10 +4,11 @@
  * Agents · for hire: every agent that holds a Corbel mandate, with its record read from the chain. Trades made, trades
  * the contract refused, bond posted and bond lost to owners. Pick one by its record and make it your mandate's agent.
  */
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { cx } from "@corbel/ui";
 import { CopyButton } from "@/components/docs/CopyButton";
 import { short } from "./kit";
+import { AgentHire } from "./AgentHire";
 
 type A = { agent: string; mandates: number; trades: number; refused: number; bonded: number; lost: number; frozen: number };
 type R = { block: string; mandates: number; agents: A[]; error?: string };
@@ -15,6 +16,7 @@ const SCAN = "https://robinhoodchain.blockscout.com/address/";
 
 export function AgentRegistry() {
   const [r, setR] = useState<R | null>(null);
+  const [hire, setHire] = useState<string | null>(null);
   useEffect(() => {
     fetch("/api/agents/registry")
       .then((x) => x.json() as Promise<R>)
@@ -43,21 +45,39 @@ export function AgentRegistry() {
             </thead>
             <tbody>
               {r.agents.map((a) => (
-                <tr key={a.agent} className="border-b border-line/60 font-mono">
+                <Fragment key={a.agent}>
+                <tr className="border-b border-line/60 font-mono">
                   <td className="px-4 py-2"><a href={SCAN + a.agent} target="_blank" rel="noreferrer" className="text-text hover:underline">{short(a.agent)} ↗</a>{a.frozen > 0 && <span className="ml-2 text-[11.5px] text-flesh">frozen once</span>}</td>
                   <td className="px-4 py-2 text-text">{a.mandates}</td>
                   <td className="px-4 py-2 text-leaf">{a.trades}</td>
                   <td className={cx("px-4 py-2", a.refused ? "text-flesh" : "text-muted")}>{a.refused}</td>
                   <td className="px-4 py-2 text-text">{`${a.bonded.toFixed(2)} USDG`}</td>
                   <td className={cx("px-4 py-2", a.lost ? "text-flesh" : "text-muted")}>{`${a.lost.toFixed(2)} USDG`}</td>
-                  <td className="px-4 py-2 text-right"><CopyButton text={a.agent} /></td>
+                  <td className="px-4 py-2 text-right">
+                    <span className="inline-flex items-center gap-2">
+                      <CopyButton text={a.agent} />
+                      {a.frozen === 0 && (
+                        <button type="button" onClick={() => setHire(hire === a.agent ? null : a.agent)} className="rounded-md border border-leaf/50 px-2.5 py-1 font-sans text-[12px] text-leaf hover:bg-leaf/10">
+                          Hire
+                        </button>
+                      )}
+                    </span>
+                  </td>
                 </tr>
+                {hire === a.agent && (
+                  <tr>
+                    <td colSpan={7} className="p-0">
+                      <AgentHire agent={a.agent} onClose={() => setHire(null)} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
       )}
-      <p className="border-t border-line px-5 py-3 text-[12.5px] text-muted">Every figure is an event of the mandate contract. To hire one, copy its address and set it as your mandate&apos;s agent: your caps and its bond decide what it may do.</p>
+      <p className="border-t border-line px-5 py-3 text-[12.5px] text-muted">Every figure is an event of the mandate contract. Hire one and your own wallet makes a mandate for it: your caps, your end date, its bond. Agents that were frozen cannot be hired here.</p>
     </section>
   );
 }
